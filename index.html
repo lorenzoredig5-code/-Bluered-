@@ -10,7 +10,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       margin: 0;
       background-color: #f4f4f9;
     }
@@ -19,7 +19,7 @@
       padding: 25px;
       border-radius: 8px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      width: 320px;
+      width: 340px;
       text-align: center;
     }
     input {
@@ -38,11 +38,17 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 16px;
-      margin-top: 10px;
+      font-size: 15px;
+      margin-top: 8px;
     }
     button:hover {
       background-color: #0056b3;
+    }
+    .btn-alt {
+      background-color: #6c757d;
+    }
+    .btn-alt:hover {
+      background-color: #5a6268;
     }
     .escondido {
       display: none;
@@ -67,18 +73,42 @@
 
   <div class="container">
     
-    <!-- TELA 1: CADASTRO -->
-    <div id="tela-cadastro">
+    <!-- Div invisível necessária para o reCAPTCHA do Firebase -->
+    <div id="recaptcha-container"></div>
+
+    <!-- TELA 1: CADASTRO COM E-MAIL -->
+    <div id="tela-cadastro-email">
       <h2>Criar Conta</h2>
-      <form id="form-cadastro">
+      <button type="button" class="btn-alt" id="btn-mudar-tel-cadastro">Não tem e-mail? Cadastrar com Telefone</button>
+      <form id="form-cadastro-email">
         <input type="email" id="email-cadastro" placeholder="Digite seu e-mail" required />
         <input type="password" id="senha-cadastro" placeholder="Digite sua senha" required />
-        <button type="submit">Cadastrar</button>
+        <button type="submit">Cadastrar com E-mail</button>
       </form>
       <div class="link-troca" id="go-to-login">Já tem uma conta? Faça Login</div>
     </div>
 
-    <!-- TELA DE AVISO DE VERIFICAÇÃO -->
+    <!-- TELA 2: CADASTRO COM TELEFONE (ENVIO DE SMS) -->
+    <div id="tela-cadastro-tel" class="escondido">
+      <h2>Cadastrar com Telefone</h2>
+      <button type="button" class="btn-alt" id="btn-mudar-email-cadastro">Usar E-mail para Cadastrar</button>
+      
+      <!-- Passo 1: Enviar número -->
+      <form id="form-envio-sms">
+        <input type="tel" id="tel-cadastro" placeholder="+55 11 99999-9999" required />
+        <button type="submit">Enviar SMS com Código</button>
+      </form>
+
+      <!-- Passo 2: Digitar código do SMS -->
+      <form id="form-validar-sms" class="escondido">
+        <p>Digite o código de 6 dígitos enviado por SMS:</p>
+        <input type="text" id="codigo-sms" placeholder="123456" required />
+        <button type="submit">Confirmar Código e Finalizar</button>
+      </form>
+      <div class="link-troca" id="go-to-login-2">Já tem uma conta? Faça Login</div>
+    </div>
+
+    <!-- TELA DE AVISO DE VERIFICAÇÃO DE E-MAIL -->
     <div id="tela-verificacao" class="escondido">
       <div class="mensagem-alerta">
         <strong>Espero por favor verifique se o e-mail!</strong>
@@ -87,14 +117,23 @@
       <button id="btn-ir-login">Ir para o Login</button>
     </div>
 
-    <!-- TELA 2: LOGIN -->
+    <!-- TELA 3: LOGIN UNIFICADO (E-MAIL OU TELEFONE) -->
     <div id="tela-login" class="escondido">
       <h2>Acessar Conta</h2>
+      
       <form id="form-login">
-        <input type="email" id="email-login" placeholder="Digite seu e-mail de novo" required />
-        <input type="password" id="senha-login" placeholder="Digite sua senha de novo" required />
+        <input type="text" id="login-identificador" placeholder="Digite seu e-mail ou nº de telefone" required />
+        <input type="password" id="senha-login" placeholder="Digite sua senha" required />
         <button type="submit">Entrar no Site</button>
       </form>
+
+      <!-- Sub-formulário caso o login seja por telefone -->
+      <form id="form-login-sms" class="escondido">
+        <p>Digite o código SMS para confirmar o login:</p>
+        <input type="text" id="codigo-sms-login" placeholder="123456" required />
+        <button type="submit">Validar Login</button>
+      </form>
+
       <div class="link-troca" id="go-to-cadastro">Não tem conta? Cadastre-se</div>
     </div>
 
@@ -107,6 +146,8 @@
       createUserWithEmailAndPassword, 
       sendEmailVerification, 
       signInWithEmailAndPassword, 
+      signInWithPhoneNumber,
+      RecaptchaVerifier,
       signOut 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -123,72 +164,147 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // Seletores de elementos da interface
-    const telaCadastro = document.getElementById("tela-cadastro");
+    // Configuração do reCAPTCHA do Firebase (Obrigatório para SMS)
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'invisible'
+    });
+
+    // Guardar objeto de confirmação do SMS
+    let confirmationResultGlobal = null;
+
+    // Seletores de elementos
+    const telaCadastroEmail = document.getElementById("tela-cadastro-email");
+    const telaCadastroTel = document.getElementById("tela-cadastro-tel");
     const telaVerificacao = document.getElementById("tela-verificacao");
     const telaLogin = document.getElementById("tela-login");
 
-    const formCadastro = document.getElementById("form-cadastro");
+    const formCadastroEmail = document.getElementById("form-cadastro-email");
+    const formEnvioSms = document.getElementById("form-envio-sms");
+    const formValidarSms = document.getElementById("form-validar-sms");
     const formLogin = document.getElementById("form-login");
+    const formLoginSms = document.getElementById("form-login-sms");
 
-    const goToLogin = document.getElementById("go-to-login");
-    const goToCadastro = document.getElementById("go-to-cadastro");
-    const btnIrLogin = document.getElementById("btn-ir-login");
-
-    // Funções de navegação entre telas
-    function exibirTela(telaExibir) {
-      telaCadastro.classList.add("escondido");
+    // Navegação
+    function esconderTelas() {
+      telaCadastroEmail.classList.add("escondido");
+      telaCadastroTel.classList.add("escondido");
       telaVerificacao.classList.add("escondido");
       telaLogin.classList.add("escondido");
-      telaExibir.classList.remove("escondido");
     }
 
-    goToLogin.addEventListener("click", () => exibirTela(telaLogin));
-    goToCadastro.addEventListener("click", () => exibirTela(telaCadastro));
-    btnIrLogin.addEventListener("click", () => exibirTela(telaLogin));
+    document.getElementById("btn-mudar-tel-cadastro").addEventListener("click", () => {
+      esconderTelas();
+      telaCadastroTel.classList.remove("escondido");
+    });
 
-    // LÓGICA DE CADASTRO
-    formCadastro.addEventListener("submit", async (e) => {
+    document.getElementById("btn-mudar-email-cadastro").addEventListener("click", () => {
+      esconderTelas();
+      telaCadastroEmail.classList.remove("escondido");
+    });
+
+    document.getElementById("go-to-login").addEventListener("click", () => { esconderTelas(); telaLogin.classList.remove("escondido"); });
+    document.getElementById("go-to-login-2").addEventListener("click", () => { esconderTelas(); telaLogin.classList.remove("escondido"); });
+    document.getElementById("go-to-cadastro").addEventListener("click", () => { esconderTelas(); telaCadastroEmail.classList.remove("escondido"); });
+    document.getElementById("btn-ir-login").addEventListener("click", () => { esconderTelas(); telaLogin.classList.remove("escondido"); });
+
+    // 1. CADASTRO POR E-MAIL
+    formCadastroEmail.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("email-cadastro").value;
       const senha = document.getElementById("senha-cadastro").value;
 
       try {
-        // 1. Cria a conta
         const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
-        // 2. Envia e-mail de confirmação
         await sendEmailVerification(userCredential.user);
-        // 3. Desconecta o usuário
         await signOut(auth);
 
-        // Exibe a mensagem de aviso para verificar o e-mail
-        exibirTela(telaVerificacao);
+        esconderTelas();
+        telaVerificacao.classList.remove("escondido");
       } catch (error) {
-        alert("Erro no cadastro: " + error.message);
+        alert("Erro no cadastro por e-mail: " + error.message);
       }
     });
 
-    // LÓGICA DE LOGIN
-    formLogin.addEventListener("submit", async (e) => {
+    // 2. CADASTRO POR TELEFONE (PASSO 1: ENVIAR SMS)
+    formEnvioSms.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = document.getElementById("email-login").value;
-      const senha = document.getElementById("senha-login").value;
+      const telefone = document.getElementById("tel-cadastro").value;
 
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, senha);
-        const user = userCredential.user;
-
-        // Verifica se o usuário já clicou no link do e-mail
-        if (user.emailVerified) {
-          alert("Login confirmado com sucesso! Entrando no site...");
-          // Redirecione para a página interna do seu site aqui:
-          // window.location.href = "dashboard.html";
-        } else {
-          alert("Por favor, verifique seu e-mail antes de acessar. Enviamos o link para a sua caixa de entrada.");
-          await signOut(auth);
-        }
+        const appVerifier = window.recaptchaVerifier;
+        confirmationResultGlobal = await signInWithPhoneNumber(auth, telefone, appVerifier);
+        
+        alert("SMS enviado para " + telefone);
+        formEnvioSms.classList.add("escondido");
+        formValidarSms.classList.remove("escondido");
       } catch (error) {
-        alert("Erro no login: " + error.message);
+        alert("Erro ao enviar SMS: " + error.message);
+      }
+    });
+
+    // CADASTRO POR TELEFONE (PASSO 2: VALIDAR CÓDIGO)
+    formValidarSms.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const codigo = document.getElementById("codigo-sms").value;
+
+      try {
+        const result = await confirmationResultGlobal.confirm(codigo);
+        alert("Telefone verificado e conta criada com sucesso!");
+        esconderTelas();
+        telaLogin.classList.remove("escondido");
+      } catch (error) {
+        alert("Código inválido ou expirado: " + error.message);
+      }
+    });
+
+    // 3. LOGIN UNIFICADO (DETECTA SE É E-MAIL OU TELEFONE)
+    formLogin.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const identificador = document.getElementById("login-identificador").value;
+      const senha = document.getElementById("senha-login").value;
+
+      // Se começar com "+" ou conter apenas números/traços, trata como telefone
+      const ehTelefone = /^[\+\d\s\-\(\)]+$/.test(identificador) && !identificador.includes("@");
+
+      if (ehTelefone) {
+        try {
+          const appVerifier = window.recaptchaVerifier;
+          confirmationResultGlobal = await signInWithPhoneNumber(auth, identificador, appVerifier);
+          
+          alert("SMS de login enviado para " + identificador);
+          formLogin.classList.add("escondido");
+          formLoginSms.classList.remove("escondido");
+        } catch (error) {
+          alert("Erro ao enviar SMS para o número informado: " + error.message);
+        }
+      } else {
+        // Login com E-mail e Senha
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, identificador, senha);
+          const user = userCredential.user;
+
+          if (user.emailVerified) {
+            alert("Login realizado com sucesso! Redirecionando...");
+          } else {
+            alert("Por favor, verifique seu e-mail antes de continuar.");
+            await signOut(auth);
+          }
+        } catch (error) {
+          alert("Erro no login: " + error.message);
+        }
+      }
+    });
+
+    // VALIDAR CÓDIGO DO LOGIN VIA TELEFONE
+    formLoginSms.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const codigo = document.getElementById("codigo-sms-login").value;
+
+      try {
+        await confirmationResultGlobal.confirm(codigo);
+        alert("Login via telefone confirmado com sucesso!");
+      } catch (error) {
+        alert("Código de login incorreto: " + error.message);
       }
     });
   </script>
