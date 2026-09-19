@@ -44,6 +44,13 @@
     button:hover {
       background-color: #0056b3;
     }
+    .btn-reset {
+      background-color: #ffc107;
+      color: #212529;
+    }
+    .btn-reset:hover {
+      background-color: #e0a800;
+    }
     .btn-sair {
       background-color: #dc3545;
       width: auto;
@@ -122,6 +129,10 @@
         <input type="password" id="senha-login" placeholder="Digite sua senha de novo" required />
         <button type="submit">Entrar no Site</button>
       </form>
+      
+      <!-- BOTÃO DE REDEFINIR SENHA -->
+      <button type="button" id="btn-esqueci-senha" class="btn-reset">Esqueci a senha / Redefinir senha</button>
+
       <div class="link-troca" id="go-to-cadastro">Não tem conta? Cadastre-se</div>
     </div>
 
@@ -144,6 +155,7 @@
       createUserWithEmailAndPassword, 
       sendEmailVerification, 
       signInWithEmailAndPassword, 
+      sendPasswordResetEmail,
       setPersistence,
       browserLocalPersistence,
       onAuthStateChanged,
@@ -176,6 +188,7 @@
     const goToCadastro = document.getElementById("go-to-cadastro");
     const btnIrLogin = document.getElementById("btn-ir-login");
     const btnLogout = document.getElementById("btn-logout");
+    const btnEsqueciSenha = document.getElementById("btn-esqueci-senha");
     const userEmailDisplay = document.getElementById("user-email-display");
 
     // Funções de navegação entre telas
@@ -225,7 +238,6 @@
       const senha = document.getElementById("senha-login").value;
 
       try {
-        // Define a persistência local antes de realizar o login
         await setPersistence(auth, browserLocalPersistence);
         
         const userCredential = await signInWithEmailAndPassword(auth, email, senha);
@@ -240,6 +252,23 @@
         }
       } catch (error) {
         alert("Erro no login: " + error.message);
+      }
+    });
+
+    // LÓGICA PARA ENVIAR E-MAIL DE REDEFINIÇÃO DE SENHA
+    btnEsqueciSenha.addEventListener("click", async () => {
+      const email = document.getElementById("email-login").value;
+
+      if (!email) {
+        alert("Por favor, digite o seu e-mail no campo acima antes de clicar em redefinir a senha.");
+        return;
+      }
+
+      try {
+        await sendPasswordResetEmail(auth, email);
+        alert("E-mail de redefinição de senha enviado com sucesso para " + email + "! Verifique sua caixa de entrada.");
+      } catch (error) {
+        alert("Erro ao enviar e-mail de redefinição: " + error.message);
       }
     });
 
