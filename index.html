@@ -66,11 +66,24 @@
       display: none;
     }
     .mensagem-alerta {
-      color: #28a745;
-      background-color: #e8f5e9;
+      color: #856404;
+      background-color: #fff3cd;
       padding: 15px;
       border-radius: 4px;
-      border: 1px solid #a5d6a7;
+      border: 1px solid #ffeeba;
+    }
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 15px auto 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
     .link-troca {
       margin-top: 15px;
@@ -112,13 +125,15 @@
       <div class="link-troca" id="go-to-login">Já tem uma conta? Faça Login</div>
     </div>
 
-    <!-- TELA DE AVISO DE VERIFICAÇÃO -->
+    <!-- TELA DE ESPERA / VERIFICAÇÃO AUTOMÁTICA -->
     <div id="tela-verificacao" class="escondido">
       <div class="mensagem-alerta">
-        <strong>Espero por favor verifique se o e-mail!</strong>
-        <p>Enviamos um link de confirmação para a sua caixa de entrada. Após clicar no link, faça o login novamente.</p>
+        <strong>Aguardando confirmação...</strong>
+        <p>Enviamos um e-mail com o link de verificação. Por favor, acesse sua caixa de entrada e clique no link para prosseguir.</p>
       </div>
-      <button id="btn-ir-login">Ir para o Login</button>
+      <div class="loader"></div>
+      <p style="font-size: 13px; color: #666; margin-top: 10px;">Aguardando você clicar no link enviado...</p>
+      <button id="btn-cancelar-espera" class="btn-reset">Voltar para o Login</button>
     </div>
 
     <!-- TELA 2: LOGIN -->
@@ -130,7 +145,6 @@
         <button type="submit">Entrar no Site</button>
       </form>
       
-      <!-- BOTÃO DE REDEFINIR SENHA -->
       <button type="button" id="btn-esqueci-senha" class="btn-reset">Esqueci a senha / Redefinir senha</button>
 
       <div class="link-troca" id="go-to-cadastro">Não tem conta? Cadastre-se</div>
@@ -143,7 +157,7 @@
         <button id="btn-logout" class="btn-sair">Sair</button>
       </div>
       <h3>Bem-vindo ao site!</h3>
-      <p>Sua conta está verificada e sua sessão permanecerá salva mesmo se você fechar a página.</p>
+      <p>Sua conta foi verificada com sucesso e está conectada.</p>
     </div>
 
   </div>
@@ -175,7 +189,9 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // Seletores de elementos da interface
+    let intervalVerificacao = null;
+
+    // Seletores de elementos
     const telaCadastro = document.getElementById("tela-cadastro");
     const telaVerificacao = document.getElementById("tela-verificacao");
     const telaLogin = document.getElementById("tela-login");
@@ -186,13 +202,19 @@
 
     const goToLogin = document.getElementById("go-to-login");
     const goToCadastro = document.getElementById("go-to-cadastro");
-    const btnIrLogin = document.getElementById("btn-ir-login");
+    const btnCancelarEspera = document.getElementById("btn-cancelar-espera");
     const btnLogout = document.getElementById("btn-logout");
     const btnEsqueciSenha = document.getElementById("btn-esqueci-senha");
     const userEmailDisplay = document.getElementById("user-email-display");
 
-    // Funções de navegação entre telas
+    // Funções de navegação
     function exibirTela(telaExibir) {
+      // Se mudar de tela, interrompe a checagem automática
+      if (telaExibir !== telaVerificacao && intervalVerificacao) {
+        clearInterval(intervalVerificacao);
+        intervalVerificacao = null;
+      }
+
       telaCadastro.classList.add("escondido");
       telaVerificacao.classList.add("escondido");
       telaLogin.classList.add("escondido");
@@ -200,21 +222,46 @@
       telaExibir.classList.remove("escondido");
     }
 
+    // Inicia verificação em segundo plano se o e-mail foi validado
+    function iniciarVerificacaoAutomatica(user) {
+      exibirTela(telaVerificacao);
+
+      if (intervalVerificacao) clearInterval(intervalVerificacao);
+
+      intervalVerificacao = setInterval(async () => {
+        // Recarrega os dados do usuário atualizados no Firebase
+        await user.reload();
+        
+        if (user.emailVerified) {
+          clearInterval(intervalVerificacao);
+          userEmailDisplay.textContent = user.email;
+          exibirTela(telaSite);
+        }
+      }, 3000); // Checa a cada 3 segundos
+    }
+
     goToLogin.addEventListener("click", () => exibirTela(telaLogin));
     goToCadastro.addEventListener("click", () => exibirTela(telaCadastro));
-    btnIrLogin.addEventListener("click", () => exibirTela(telaLogin));
+    btnCancelarEspera.addEventListener("click", async () => {
+      await signOut(auth);
+      exibirTela(telaLogin);
+    });
 
-    // VERIFICA SE O USUÁRIO JÁ ESTÁ LOGADO (PERSISTÊNCIA AUTOMÁTICA)
+    // VERIFICA SESSÃO AO CARREGAR
     onAuthStateChanged(auth, (user) => {
-      if (user && user.emailVerified) {
-        userEmailDisplay.textContent = user.email;
-        exibirTela(telaSite);
+      if (user) {
+        if (user.emailVerified) {
+          userEmailDisplay.textContent = user.email;
+          exibirTela(telaSite);
+        } else {
+          iniciarVerificacaoAutomatica(user);
+        }
       } else {
         exibirTela(telaLogin);
       }
     });
 
-    // LÓGICA DE CADASTRO
+    // CADASTRO
     formCadastro.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("email-cadastro").value;
@@ -222,16 +269,17 @@
 
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
-        await sendEmailVerification(userCredential.user);
-        await signOut(auth);
+        const user = userCredential.user;
+        await sendEmailVerification(user);
 
-        exibirTela(telaVerificacao);
+        // Entra no modo de espera até a pessoa clicar no link
+        iniciarVerificacaoAutomatica(user);
       } catch (error) {
         alert("Erro no cadastro: " + error.message);
       }
     });
 
-    // LÓGICA DE LOGIN COM PERSISTÊNCIA LOCAL
+    // LOGIN
     formLogin.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("email-login").value;
@@ -239,7 +287,6 @@
 
       try {
         await setPersistence(auth, browserLocalPersistence);
-        
         const userCredential = await signInWithEmailAndPassword(auth, email, senha);
         const user = userCredential.user;
 
@@ -247,15 +294,16 @@
           userEmailDisplay.textContent = user.email;
           exibirTela(telaSite);
         } else {
-          alert("Por favor, verifique seu e-mail antes de acessar. Enviamos o link para a sua caixa de entrada.");
-          await signOut(auth);
+          // Reenvia e-mail e entra na tela de espera com atualização automática
+          await sendEmailVerification(user);
+          iniciarVerificacaoAutomatica(user);
         }
       } catch (error) {
         alert("Erro no login: " + error.message);
       }
     });
 
-    // LÓGICA PARA ENVIAR E-MAIL DE REDEFINIÇÃO DE SENHA
+    // REDEFINIR SENHA
     btnEsqueciSenha.addEventListener("click", async () => {
       const email = document.getElementById("email-login").value;
 
@@ -266,13 +314,13 @@
 
       try {
         await sendPasswordResetEmail(auth, email);
-        alert("E-mail de redefinição de senha enviado com sucesso para " + email + "! Verifique sua caixa de entrada.");
+        alert("E-mail de redefinição de senha enviado com sucesso para " + email + "!");
       } catch (error) {
-        alert("Erro ao enviar e-mail de redefinição: " + error.message);
+        alert("Erro ao enviar e-mail: " + error.message);
       }
     });
 
-    // LÓGICA DE LOGOUT (BOTÃO SAIR)
+    // LOGOUT
     btnLogout.addEventListener("click", async () => {
       try {
         await signOut(auth);
