@@ -61,9 +61,33 @@
     .btn-secundario:hover { background-color: #0056b3; }
     .btn-impulsionar { background-color: #ff9900; }
     .btn-impulsionar:hover { background-color: #e68a00; }
+    .btn-reset { background-color: #ffc107; color: #212529; }
+    .btn-reset:hover { background-color: #e0a800; }
     .btn-sair { background-color: #dc3545; width: auto; padding: 6px 12px; margin: 0; }
     .escondido { display: none !important; }
     
+    .mensagem-alerta {
+      color: #856404;
+      background-color: #fff3cd;
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid #ffeeba;
+      text-align: center;
+    }
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 15px auto 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     .card-grupo {
       border: 1px solid #ddd;
       border-radius: 6px;
@@ -126,7 +150,11 @@
         <input type="password" id="senha-login" placeholder="Digite sua senha" required />
         <button type="submit" class="btn-secundario">Entrar</button>
       </form>
-      <p style="font-size:13px; cursor:pointer; color:#007bff; text-decoration:underline;" id="go-to-cadastro">Não tem conta? Cadastre-se</p>
+      
+      <!-- BOTÃO ESQUECI A SENHA -->
+      <button type="button" id="btn-esqueci-senha" class="btn-reset">Esqueci a senha / Redefinir senha</button>
+
+      <p style="font-size:13px; cursor:pointer; color:#007bff; text-decoration:underline; margin-top:15px;" id="go-to-cadastro">Não tem conta? Cadastre-se</p>
     </div>
 
     <!-- CADASTRO -->
@@ -137,7 +165,18 @@
         <input type="password" id="senha-cadastro" placeholder="Digite sua senha" required />
         <button type="submit" class="btn-secundario">Cadastrar</button>
       </form>
-      <p style="font-size:13px; cursor:pointer; color:#007bff; text-decoration:underline;" id="go-to-login">Já tem conta? Faça Login</p>
+      <p style="font-size:13px; cursor:pointer; color:#007bff; text-decoration:underline; margin-top:15px;" id="go-to-login">Já tem conta? Faça Login</p>
+    </div>
+
+    <!-- TELA DE ESPERA DE VERIFICAÇÃO DE E-MAIL -->
+    <div id="tela-verificacao" class="escondido">
+      <div class="mensagem-alerta">
+        <strong>Aguardando confirmação...</strong>
+        <p style="font-size:13px; margin:8px 0 0 0;">Enviamos um e-mail com o link de verificação. Acesse sua caixa de entrada e clique no link para validar sua conta.</p>
+      </div>
+      <div class="loader"></div>
+      <p style="font-size: 13px; color: #666; text-align:center; margin-top: 10px;">Aguardando você clicar no link enviado...</p>
+      <button id="btn-cancelar-espera" class="btn-reset">Voltar para o Login</button>
     </div>
 
     <!-- TELA INICIAL: GRUPOS PUBLICADOS -->
@@ -182,7 +221,7 @@
     <!-- TELA: PLANOS DE IMPULSIONAMENTO -->
     <div id="tela-impulsionar" class="escondido">
       <h3>Impulsionar Grupo</h3>
-      <p>Selecione um plano de destaque para seu grupo aparecer no topo:</p>
+      <p style="font-size:14px; color:#555;">Selecione um plano de destaque para seu grupo aparecer no topo:</p>
       
       <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
         <strong>Plano 1 Dia</strong> - R$ 2,00
@@ -218,7 +257,13 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { 
-      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged 
+      getAuth, 
+      signInWithEmailAndPassword, 
+      createUserWithEmailAndPassword, 
+      sendEmailVerification,
+      sendPasswordResetEmail,
+      signOut, 
+      onAuthStateChanged 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
       getDatabase, ref, push, onValue 
@@ -241,6 +286,7 @@
     let usuarioAtual = null;
     let grupoSelecionadoParaImpulsionar = null;
     let linkWhatsappSelecionado = "";
+    let intervalVerificacao = null;
 
     // Elementos da Interface
     const barUsuario = document.getElementById("bar-usuario");
@@ -248,6 +294,7 @@
     
     const telaLogin = document.getElementById("tela-login");
     const telaCadastro = document.getElementById("tela-cadastro");
+    const telaVerificacao = document.getElementById("tela-verificacao");
     const telaGrupos = document.getElementById("tela-grupos");
     const telaCriarGrupo = document.getElementById("tela-criar-grupo");
     const telaRegrasGrupo = document.getElementById("tela-regras-grupo");
@@ -256,8 +303,13 @@
     const telaChatImpulsionar = document.getElementById("tela-chat-impulsionar");
 
     function esconderTelas() {
+      if (intervalVerificacao) {
+        clearInterval(intervalVerificacao);
+        intervalVerificacao = null;
+      }
       telaLogin.classList.add("escondido");
       telaCadastro.classList.add("escondido");
+      telaVerificacao.classList.add("escondido");
       telaGrupos.classList.add("escondido");
       telaCriarGrupo.classList.add("escondido");
       telaRegrasGrupo.classList.add("escondido");
@@ -266,15 +318,40 @@
       telaChatImpulsionar.classList.add("escondido");
     }
 
+    // Checa a cada 3 segundos se o e-mail foi verificado
+    function iniciarVerificacaoAutomatica(user) {
+      esconderTelas();
+      telaVerificacao.classList.remove("escondido");
+
+      if (intervalVerificacao) clearInterval(intervalVerificacao);
+
+      intervalVerificacao = setInterval(async () => {
+        await user.reload();
+        if (user.emailVerified) {
+          clearInterval(intervalVerificacao);
+          usuarioAtual = user;
+          userEmailDisplay.textContent = user.email;
+          barUsuario.classList.remove("escondido");
+          carregarGruposGerais();
+          esconderTelas();
+          telaGrupos.classList.remove("escondido");
+        }
+      }, 3000);
+    }
+
     // Monitoramento do Estado de Autenticação
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        usuarioAtual = user;
-        userEmailDisplay.textContent = user.email;
-        barUsuario.classList.remove("escondido");
-        carregarGruposGerais();
-        esconderTelas();
-        telaGrupos.classList.remove("escondido");
+        if (user.emailVerified) {
+          usuarioAtual = user;
+          userEmailDisplay.textContent = user.email;
+          barUsuario.classList.remove("escondido");
+          carregarGruposGerais();
+          esconderTelas();
+          telaGrupos.classList.remove("escondido");
+        } else {
+          iniciarVerificacaoAutomatica(user);
+        }
       } else {
         usuarioAtual = null;
         barUsuario.classList.add("escondido");
@@ -283,19 +360,52 @@
       }
     });
 
-    // Login e Cadastro
+    // Login
     document.getElementById("form-login").addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
-        await signInWithEmailAndPassword(auth, document.getElementById("email-login").value, document.getElementById("senha-login").value);
+        const userCredential = await signInWithEmailAndPassword(auth, document.getElementById("email-login").value, document.getElementById("senha-login").value);
+        const user = userCredential.user;
+        
+        if (!user.emailVerified) {
+          await sendEmailVerification(user);
+          iniciarVerificacaoAutomatica(user);
+        }
       } catch (err) { alert("Erro de login: " + err.message); }
     });
 
+    // Cadastro + Envio de E-mail de Verificação
     document.getElementById("form-cadastro").addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
-        await createUserWithEmailAndPassword(auth, document.getElementById("email-cadastro").value, document.getElementById("senha-cadastro").value);
+        const userCredential = await createUserWithEmailAndPassword(auth, document.getElementById("email-cadastro").value, document.getElementById("senha-cadastro").value);
+        const user = userCredential.user;
+        
+        // Envia o e-mail de confirmação
+        await sendEmailVerification(user);
+        
+        // Entra na tela de espera com o timer
+        iniciarVerificacaoAutomatica(user);
       } catch (err) { alert("Erro de cadastro: " + err.message); }
+    });
+
+    // Botão Esqueci a Senha
+    document.getElementById("btn-esqueci-senha").addEventListener("click", async () => {
+      const email = document.getElementById("email-login").value;
+      if (!email) {
+        alert("Por favor, digite seu e-mail no campo acima primeiro.");
+        return;
+      }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        alert("E-mail de redefinição enviado com sucesso para: " + email);
+      } catch (err) { alert("Erro ao enviar e-mail: " + err.message); }
+    });
+
+    document.getElementById("btn-cancelar-espera").addEventListener("click", async () => {
+      await signOut(auth);
+      esconderTelas();
+      telaLogin.classList.remove("escondido");
     });
 
     document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
@@ -346,7 +456,6 @@
         }
 
         const dados = snapshot.val();
-        // Ordena impulsionados para ficarem no topo
         const lista = Object.keys(dados).map(key => ({ id: key, ...dados[key] }));
         lista.sort((a, b) => b.impulsionado - a.impulsionado);
 
@@ -419,7 +528,7 @@
       }, { onlyOnce: true });
     }
 
-    // Seleção de Plano de Impulsionamento e Abertura do Chat
+    // Seleção de Plano de Impulsionamento
     window.selecionarPlano = function(plano) {
       esconderTelas();
       telaChatImpulsionar.classList.remove("escondido");
