@@ -1,9 +1,11 @@
+
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GT Hook - Plataforma de Divulgação</title>
+  <title>bluered - Plataforma de Divulgação</title>
   
   <!-- Meta tag de verificação do Google Search Console -->
   <meta name="google-site-verification" content="jXq7sGlAE0hbBC_lLV92L7sCZ16heHD5fuJ-9N6G5zE" />
@@ -127,6 +129,23 @@
       font-weight: bold;
       text-transform: uppercase;
     }
+
+    /* SELO DE VERIFICADO AZUL */
+    .selo-verificado {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #1DA1F2;
+      color: white;
+      font-size: 10px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      margin-left: 5px;
+      vertical-align: middle;
+      font-weight: bold;
+    }
+
     .chat-box {
       border: 1px solid #ccc;
       height: 180px;
@@ -149,7 +168,7 @@
     }
     .balao-sistema { background: #dcf8c6; align-self: flex-start; }
     .balao-usuario { background: #fff; align-self: flex-end; }
-    .nav-botoes { display: flex; gap: 8px; margin-bottom: 15px; }
+    .nav-botoes { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
 
     .box-admin {
       background: #e2f0d9;
@@ -213,9 +232,19 @@
       <div class="nav-botoes">
         <button id="btn-abrir-criar" class="btn-secundario">Criar Publicação</button>
         <button id="btn-abrir-meus" class="btn-impulsionar">Meus Itens</button>
+        <!-- BOTÃO PEDIDOS EXCLUSIVO DO ADMIN -->
+        <button id="btn-admin-pedidos" class="btn-admin escondido" style="width:100%;">Pedidos de Impulsionamento (Admin)</button>
       </div>
       <h3>Publicações e Grupos</h3>
       <div id="lista-grupos-geral">Carregando...</div>
+    </div>
+
+    <!-- TELA: LISTA DE PEDIDOS DE IMPULSIONAMENTO (EXCLUSIVA ADMIN) -->
+    <div id="tela-admin-pedidos" class="escondido">
+      <h3>Pedidos de Impulsionamento</h3>
+      <p style="font-size:12px; color:#666;">Selecione um grupo para aprovar o destaque no site:</p>
+      <div id="lista-pedidos-admin">Carregando pedidos...</div>
+      <button type="button" class="btn-sair" id="btn-voltar-admin" style="width:100%; margin-top:10px;">Voltar ao Início</button>
     </div>
 
     <!-- TELA: CRIAR GRUPO OU REELS -->
@@ -240,7 +269,7 @@
     <!-- TELA: VISUALIZAR DETALHES -->
     <div id="tela-regras-grupo" class="escondido">
       <div id="detalhe-tipo-badge" class="badge-tipo"></div>
-      <h3 id="detalhe-nome-grupo" style="margin-top:5px;"></h3>
+      <h3 id="detalhe-nome-grupo" style="margin-top:5px; display:flex; align-items:center; justify-content:center;"></h3>
       <p style="font-size:12px; color:#666;">Criado por: <span id="detalhe-criador-grupo"></span></p>
       <h4>Descrição / Regras:</h4>
       <div id="detalhe-regras-box" style="background:#fff3cd; padding:12px; border-radius:6px; font-size:14px; text-align:left; white-space:pre-wrap; margin-bottom:15px; border:1px solid #ffeeba;"></div>
@@ -285,7 +314,7 @@
       
       <div class="chat-box" id="chat-mensagens">
         <div class="balao-chat balao-sistema">
-          Bem-vindo ao chat de suporte! Envie aqui a foto ou mensagem com o comprovante do PIX para o e-mail do admin (lorenzoredig5@gmail.com).
+          Bem-vindo ao chat de suporte! Envie aqui o comprovante do PIX para o e-mail do admin (lorenzoredig5@gmail.com).
         </div>
       </div>
 
@@ -294,10 +323,10 @@
         <button type="submit" class="btn-secundario">Enviar Mensagem</button>
       </form>
 
-      <!-- BOTÃO EXCLUSIVO DE ADMIN PARA IMPULSIONAR -->
+      <!-- BOTÃO EXCLUSIVO DE ADMIN PARA IMPULSIONAR DENTRO DO CHAT -->
       <div id="painel-admin-impulsionar" class="box-admin escondido">
         <strong>Painel Admin (lorenzoredig5@gmail.com)</strong>
-        <p style="font-size:12px; margin:5px 0;">Clique para aprovar o impulsionamento deste item:</p>
+        <p style="font-size:12px; margin:5px 0;">Aprovar impulsionamento direto:</p>
         <button type="button" class="btn-admin" onclick="adminAprovarImpulsionamento(1)">Impulsionar por 1 Dia</button>
         <button type="button" class="btn-admin" onclick="adminAprovarImpulsionamento(5)">Impulsionar por 5 Dias</button>
         <button type="button" class="btn-admin" onclick="adminAprovarImpulsionamento(30)">Impulsionar por 30 Dias</button>
@@ -352,11 +381,14 @@
     const telaCadastro = document.getElementById("tela-cadastro");
     const telaVerificacao = document.getElementById("tela-verificacao");
     const telaGrupos = document.getElementById("tela-grupos");
+    const telaAdminPedidos = document.getElementById("tela-admin-pedidos");
     const telaCriarGrupo = document.getElementById("tela-criar-grupo");
     const telaRegrasGrupo = document.getElementById("tela-regras-grupo");
     const telaMeusGrupos = document.getElementById("tela-meus-grupos");
     const telaImpulsionar = document.getElementById("tela-impulsionar");
     const telaChatImpulsionar = document.getElementById("tela-chat-impulsionar");
+
+    const btnAdminPedidos = document.getElementById("btn-admin-pedidos");
     const painelAdmin = document.getElementById("painel-admin-impulsionar");
 
     function esconderTelas() {
@@ -368,6 +400,7 @@
       telaCadastro.classList.add("escondido");
       telaVerificacao.classList.add("escondido");
       telaGrupos.classList.add("escondido");
+      telaAdminPedidos.classList.add("escondido");
       telaCriarGrupo.classList.add("escondido");
       telaRegrasGrupo.classList.add("escondido");
       telaMeusGrupos.classList.add("escondido");
@@ -409,6 +442,14 @@
           usuarioAtual = user;
           userEmailDisplay.textContent = user.email;
           barUsuario.classList.remove("escondido");
+          
+          // Exibe botão de admin se for o e-mail cadastrado
+          if (user.email === EMAIL_ADMIN) {
+            btnAdminPedidos.classList.remove("escondido");
+          } else {
+            btnAdminPedidos.classList.add("escondido");
+          }
+
           carregarGruposGerais();
           esconderTelas();
           telaGrupos.classList.remove("escondido");
@@ -479,6 +520,8 @@
     document.getElementById("btn-voltar-inicio-meus").addEventListener("click", () => { esconderTelas(); telaGrupos.classList.remove("escondido"); });
     document.getElementById("btn-voltar-meus").addEventListener("click", () => { esconderTelas(); telaMeusGrupos.classList.remove("escondido"); });
     document.getElementById("btn-fechar-chat").addEventListener("click", () => { esconderTelas(); telaMeusGrupos.classList.remove("escondido"); });
+    document.getElementById("btn-admin-pedidos").addEventListener("click", () => { carregarPedidosAdmin(); esconderTelas(); telaAdminPedidos.classList.remove("escondido"); });
+    document.getElementById("btn-voltar-admin").addEventListener("click", () => { esconderTelas(); telaGrupos.classList.remove("escondido"); });
 
     // Salvar Nova Publicação no Database
     document.getElementById("form-criar-grupo").addEventListener("submit", async (e) => {
@@ -525,11 +568,12 @@
           card.className = "card-grupo";
           
           const tipoTexto = formatarTipoText(g.tipo);
+          const seloVerificado = g.impulsionado ? '<span class="selo-verificado" title="Grupo Impulsionado / Verificado">✓</span>' : '';
 
           card.innerHTML = `
             ${g.impulsionado ? '<span class="badge-destaque">IMPULSIONADO</span>' : ''}
             <span class="badge-tipo">${tipoTexto}</span>
-            <h4 style="margin:5px 0;">${g.nome}</h4>
+            <h4 style="margin:5px 0; display:flex; align-items:center;">${g.nome} ${seloVerificado}</h4>
             <p style="font-size:12px; color:#555; margin:0 0 10px 0;">Por: ${g.criadoPor}</p>
             <button class="btn-secundario" style="width:100%;">Abrir</button>
           `;
@@ -541,8 +585,10 @@
 
     // Exibir Regras/Detalhes
     function abrirRegrasGrupo(grupo) {
+      const seloVerificado = grupo.impulsionado ? '<span class="selo-verificado">✓</span>' : '';
+      
       document.getElementById("detalhe-tipo-badge").textContent = formatarTipoText(grupo.tipo);
-      document.getElementById("detalhe-nome-grupo").textContent = grupo.nome;
+      document.getElementById("detalhe-nome-grupo").innerHTML = `${grupo.nome} ${seloVerificado}`;
       document.getElementById("detalhe-criador-grupo").textContent = grupo.criadoPor;
       document.getElementById("detalhe-regras-box").textContent = grupo.regras;
       
@@ -586,10 +632,12 @@
             encontrou = true;
             const card = document.createElement("div");
             card.className = "card-grupo";
+            const seloVerificado = g.impulsionado ? '<span class="selo-verificado">✓</span>' : '';
+
             card.innerHTML = `
               <span class="badge-tipo">${formatarTipoText(g.tipo)}</span>
-              <h4 style="margin:5px 0;">${g.nome}</h4>
-              <p style="font-size:12px; margin:0 0 8px 0;">Status: <strong>${g.impulsionado ? 'Impulsionado' : 'Padrão'}</strong></p>
+              <h4 style="margin:5px 0; display:flex; align-items:center;">${g.nome} ${seloVerificado}</h4>
+              <p style="font-size:12px; margin:0 0 8px 0;">Status: <strong>${g.impulsionado ? 'Impulsionado / Verificado' : 'Padrão'}</strong></p>
               <button class="btn-impulsionar">Impulsionar / Chat</button>
             `;
             card.querySelector("button").addEventListener("click", () => {
@@ -605,12 +653,44 @@
       }, { onlyOnce: true });
     }
 
+    // Carregar Pedidos de Impulsionamento na Tela de Admin
+    function carregarPedidosAdmin() {
+      const gruposRef = ref(db, 'grupos');
+      onValue(gruposRef, (snapshot) => {
+        const container = document.getElementById("lista-pedidos-admin");
+        container.innerHTML = "";
+        if (!snapshot.exists()) {
+          container.innerHTML = "<p>Nenhum item cadastrado.</p>";
+          return;
+        }
+
+        const dados = snapshot.val();
+        Object.keys(dados).forEach(key => {
+          const g = dados[key];
+          const card = document.createElement("div");
+          card.className = "card-grupo";
+          const selo = g.impulsionado ? '<span class="selo-verificado">✓</span>' : '';
+
+          card.innerHTML = `
+            <span class="badge-tipo">${formatarTipoText(g.tipo)}</span>
+            <h4 style="margin:5px 0; display:flex; align-items:center;">${g.nome} ${selo}</h4>
+            <p style="font-size:12px; color:#555; margin:0 0 5px 0;">Criador: ${g.criadoPor}</p>
+            <p style="font-size:12px; margin:0 0 10px 0;">Status Atual: <strong>${g.impulsionado ? 'Impulsionado' : 'Não Impulsionado'}</strong></p>
+            <button class="btn-admin" onclick="adminAprovarPorId('${key}', 1)">Aprovar 1 Dia</button>
+            <button class="btn-admin" onclick="adminAprovarPorId('${key}', 5)">Aprovar 5 Dias</button>
+            <button class="btn-admin" onclick="adminAprovarPorId('${key}', 30)">Aprovar 30 Dias</button>
+          `;
+          container.appendChild(card);
+        });
+      }, { onlyOnce: true });
+    }
+
     // Seleção de Plano de Impulsionamento
     window.selecionarPlano = function(plano) {
       esconderTelas();
       telaChatImpulsionar.classList.remove("escondido");
       
-      // Verifica se é o admin logado para exibir o painel de aprovação
+      // Exibe painel se for admin
       if (usuarioAtual && usuarioAtual.email === EMAIL_ADMIN) {
         painelAdmin.classList.remove("escondido");
       } else {
@@ -625,28 +705,32 @@
       `;
     };
 
-    // Função Exclusiva de Admin para Impulsionar no Firebase
+    // Função Exclusiva do Admin para Aprovar Impulsionamento Direto no Chat
     window.adminAprovarImpulsionamento = async function(dias) {
       if (!grupoSelecionadoParaImpulsionar) {
         alert("Nenhum item selecionado!");
         return;
       }
+      await adminAprovarPorId(grupoSelecionadoParaImpulsionar, dias);
+      
+      const chatBox = document.getElementById("chat-mensagens");
+      chatBox.innerHTML += `
+        <div class="balao-chat balao-sistema" style="background:#d4edda; border:1px solid #c3e6cb; color:#155724;">
+          <strong>Parabéns, seu grupo está impulsionado por ${dias} dias!</strong>
+        </div>
+      `;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    };
 
+    // Função Geral do Admin para Aprovar por ID
+    window.adminAprovarPorId = async function(idGrupo, dias) {
       try {
-        const itemRef = ref(db, `grupos/${grupoSelecionadoParaImpulsionar}`);
+        const itemRef = ref(db, `grupos/${idGrupo}`);
         await update(itemRef, {
           impulsionado: true,
           diasImpulsionados: dias
         });
-
-        const chatBox = document.getElementById("chat-mensagens");
-        chatBox.innerHTML += `
-          <div class="balao-chat balao-sistema" style="background:#d4edda; border:1px solid #c3e6cb; color:#155724;">
-            <strong>Parabéns! Seu grupo está impulsionado por ${dias} dia(s).</strong>
-          </div>
-        `;
-        chatBox.scrollTop = chatBox.scrollHeight;
-        alert(`Sucesso! O grupo foi impulsionado por ${dias} dia(s).`);
+        alert(`Sucesso! Grupo/Item impulsionado por ${dias} dias com selo de verificado.`);
       } catch (err) {
         alert("Erro ao impulsionar: " + err.message);
       }
@@ -669,4 +753,3 @@
 
 </body>
 </html>
-
