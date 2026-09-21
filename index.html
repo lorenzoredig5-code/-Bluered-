@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Divulga Zapzao</title>
+  <title>GT Hook - Plataforma de Divulgação</title>
   
   <!-- Meta tag de verificação do Google Search Console -->
-  <meta name="google-site-verification" content="X9q0AHpQRUdJBenkrf_zb3c3igdyCoswJR0oxIwd4cE" />
+  <meta name="google-site-verification" content="jXq7sGlAE0hbBC_lLV92L7sCZ16heHD5fuJ-9N6G5zE" />
+  <meta name="description" content="GT Hook: Encontre, divulgue e impulsione grupos de WhatsApp, grupos e Reels do Instagram." />
 
   <style>
     body {
@@ -40,13 +41,14 @@
       max-width: 460px;
       box-sizing: border-box;
     }
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 10px;
       margin: 8px 0;
       border: 1px solid #ccc;
       border-radius: 4px;
       box-sizing: border-box;
+      font-size: 14px;
     }
     button {
       width: 100%;
@@ -65,6 +67,8 @@
     .btn-secundario:hover { background-color: #0056b3; }
     .btn-impulsionar { background-color: #ff9900; }
     .btn-impulsionar:hover { background-color: #e68a00; }
+    .btn-admin { background-color: #28a745; margin-top: 5px; }
+    .btn-admin:hover { background-color: #218838; }
     .btn-reset { background-color: #ffc107; color: #212529; }
     .btn-reset:hover { background-color: #e0a800; }
     .btn-sair { background-color: #dc3545; width: auto; padding: 6px 12px; margin: 0; }
@@ -112,9 +116,20 @@
       border-radius: 4px;
       font-weight: bold;
     }
+    .badge-tipo {
+      display: inline-block;
+      background: #e9ecef;
+      color: #495057;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 5px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
     .chat-box {
       border: 1px solid #ccc;
-      height: 150px;
+      height: 180px;
       overflow-y: auto;
       padding: 10px;
       background: #e5ddd5;
@@ -130,10 +145,20 @@
       margin-bottom: 8px;
       max-width: 80%;
       font-size: 13px;
+      word-break: break-word;
     }
     .balao-sistema { background: #dcf8c6; align-self: flex-start; }
     .balao-usuario { background: #fff; align-self: flex-end; }
     .nav-botoes { display: flex; gap: 8px; margin-bottom: 15px; }
+
+    .box-admin {
+      background: #e2f0d9;
+      border: 1px solid #b6d7a8;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -183,49 +208,57 @@
       <button id="btn-cancelar-espera" class="btn-reset">Voltar para o Login</button>
     </div>
 
-    <!-- TELA INICIAL: GRUPOS PUBLICADOS -->
+    <!-- TELA INICIAL: DIVULGAÇÕES PUBLICADAS -->
     <div id="tela-grupos" class="escondido">
       <div class="nav-botoes">
-        <button id="btn-abrir-criar" class="btn-secundario">Criar Grupo</button>
-        <button id="btn-abrir-meus" class="btn-impulsionar">Meus Grupos</button>
+        <button id="btn-abrir-criar" class="btn-secundario">Criar Publicação</button>
+        <button id="btn-abrir-meus" class="btn-impulsionar">Meus Itens</button>
       </div>
-      <h3>Grupos de WhatsApp</h3>
-      <div id="lista-grupos-geral">Carregando grupos...</div>
+      <h3>Publicações e Grupos</h3>
+      <div id="lista-grupos-geral">Carregando...</div>
     </div>
 
-    <!-- TELA: CRIAR GRUPO -->
+    <!-- TELA: CRIAR GRUPO OU REELS -->
     <div id="tela-criar-grupo" class="escondido">
-      <h3>Criar Novo Grupo</h3>
+      <h3>Criar Nova Publicação</h3>
       <form id="form-criar-grupo">
-        <input type="text" id="nome-grupo" placeholder="Nome do Grupo" required />
-        <input type="url" id="link-grupo" placeholder="Link do Grupo (https://chat.whatsapp.com/...)" required />
-        <textarea id="regras-grupo" rows="4" placeholder="Escreva as Regras do Grupo..." required></textarea>
-        <button type="submit">Enviar / Publicar Grupo</button>
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">Tipo de Divulgação:</label>
+        <select id="tipo-link" required>
+          <option value="whatsapp">Grupo de WhatsApp</option>
+          <option value="instagram_grupo">Grupo do Instagram</option>
+          <option value="reels">Reels / Vídeo do Instagram</option>
+        </select>
+
+        <input type="text" id="nome-grupo" placeholder="Título / Nome" required />
+        <input type="url" id="link-grupo" placeholder="Cole o Link (https://...)" required />
+        <textarea id="regras-grupo" rows="4" placeholder="Escreva a descrição ou regras..." required></textarea>
+        <button type="submit">Enviar / Publicar</button>
         <button type="button" class="btn-sair" id="btn-cancelar-criar" style="width:100%; margin-top:5px;">Voltar</button>
       </form>
     </div>
 
-    <!-- TELA: VISUALIZAR REGRAS DO GRUPO -->
+    <!-- TELA: VISUALIZAR DETALHES -->
     <div id="tela-regras-grupo" class="escondido">
-      <h3 id="detalhe-nome-grupo"></h3>
+      <div id="detalhe-tipo-badge" class="badge-tipo"></div>
+      <h3 id="detalhe-nome-grupo" style="margin-top:5px;"></h3>
       <p style="font-size:12px; color:#666;">Criado por: <span id="detalhe-criador-grupo"></span></p>
-      <h4>Regras do Grupo:</h4>
+      <h4>Descrição / Regras:</h4>
       <div id="detalhe-regras-box" style="background:#fff3cd; padding:12px; border-radius:6px; font-size:14px; text-align:left; white-space:pre-wrap; margin-bottom:15px; border:1px solid #ffeeba;"></div>
-      <button id="btn-entrar-whatsapp">Abrir Grupo no WhatsApp</button>
+      <button id="btn-entrar-whatsapp">Abrir Link</button>
       <button type="button" class="btn-sair" id="btn-voltar-grupos" style="width:100%; margin-top:5px;">Voltar</button>
     </div>
 
     <!-- TELA: MEUS GRUPOS -->
     <div id="tela-meus-grupos" class="escondido">
-      <h3>Meus Grupos Criados</h3>
-      <div id="lista-meus-grupos">Você ainda não criou nenhum grupo.</div>
+      <h3>Minhas Publicações</h3>
+      <div id="lista-meus-grupos">Você ainda não criou nenhuma publicação.</div>
       <button type="button" class="btn-secundario" id="btn-voltar-inicio-meus" style="margin-top:10px;">Voltar para Início</button>
     </div>
 
     <!-- TELA: PLANOS DE IMPULSIONAMENTO -->
     <div id="tela-impulsionar" class="escondido">
-      <h3>Impulsionar Grupo</h3>
-      <p style="font-size:14px; color:#555;">Selecione um plano de destaque para seu grupo aparecer no topo:</p>
+      <h3>Impulsionar Publicação</h3>
+      <p style="font-size:14px; color:#555;">Selecione um plano de destaque para aparecer no topo:</p>
       
       <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
         <strong>Plano 1 Dia</strong> - R$ 2,00
@@ -233,27 +266,44 @@
       </div>
 
       <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
-        <strong>Plano 1 Mês</strong> - R$ 30,00
+        <strong>Plano 5 Dias</strong> - R$ 8,00
+        <button class="btn-impulsionar" onclick="selecionarPlano('5 Dias (R$ 8,00)')">Comprar 5 Dias</button>
+      </div>
+
+      <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
+        <strong>Plano 1 Mês (30 Dias)</strong> - R$ 30,00
         <button class="btn-impulsionar" onclick="selecionarPlano('1 Mês (R$ 30,00)')">Comprar 1 Mês</button>
       </div>
 
       <button type="button" class="btn-sair" id="btn-voltar-meus" style="width:100%;">Cancelar</button>
     </div>
 
-    <!-- TELA: CHAT DO IMPULSIONAMENTO (ENVIO DE PIX) -->
+    <!-- TELA: CHAT DO IMPULSIONAMENTO (SUPORTE / ADMIN) -->
     <div id="tela-chat-impulsionar" class="escondido">
-      <h3>Atendimento PIX / Impulsionar</h3>
+      <h3>Atendimento / Suporte Chat</h3>
+      <p style="font-size:11px; color:#666;">Atendimento direto com: <strong>lorenzoredig5@gmail.com</strong></p>
+      
       <div class="chat-box" id="chat-mensagens">
         <div class="balao-chat balao-sistema">
-          Criamos o chat de suporte para você! Chave PIX: <strong>pix@suporte.com</strong>.<br>
-          Por favor, envie o comprovante de pagamento abaixo para impulsionarmos seu grupo.
+          Bem-vindo ao chat de suporte! Envie aqui a foto ou mensagem com o comprovante do PIX para o e-mail do admin (lorenzoredig5@gmail.com).
         </div>
       </div>
+
       <form id="form-chat">
         <input type="text" id="input-msg" placeholder="Digite a mensagem ou link do comprovante..." required />
         <button type="submit" class="btn-secundario">Enviar Mensagem</button>
       </form>
-      <button type="button" class="btn-sair" id="btn-fechar-chat" style="width:100%; margin-top:5px;">Concluir / Voltar</button>
+
+      <!-- BOTÃO EXCLUSIVO DE ADMIN PARA IMPULSIONAR -->
+      <div id="painel-admin-impulsionar" class="box-admin escondido">
+        <strong>Painel Admin (lorenzoredig5@gmail.com)</strong>
+        <p style="font-size:12px; margin:5px 0;">Clique para aprovar o impulsionamento deste item:</p>
+        <button type="button" class="btn-admin" onclick="adminAprovarImpulsionamento(1)">Impulsionar por 1 Dia</button>
+        <button type="button" class="btn-admin" onclick="adminAprovarImpulsionamento(5)">Impulsionar por 5 Dias</button>
+        <button type="button" class="btn-admin" onclick="adminAprovarImpulsionamento(30)">Impulsionar por 30 Dias</button>
+      </div>
+
+      <button type="button" class="btn-sair" id="btn-fechar-chat" style="width:100%; margin-top:10px;">Concluir / Voltar</button>
     </div>
 
   </div>
@@ -270,7 +320,7 @@
       onAuthStateChanged 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
-      getDatabase, ref, push, onValue 
+      getDatabase, ref, push, onValue, update 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -287,9 +337,11 @@
     const auth = getAuth(app);
     const db = getDatabase(app);
 
+    const EMAIL_ADMIN = "lorenzoredig5@gmail.com";
+
     let usuarioAtual = null;
     let grupoSelecionadoParaImpulsionar = null;
-    let linkWhatsappSelecionado = "";
+    let linkSelecionado = "";
     let intervalVerificacao = null;
 
     // Elementos da Interface
@@ -305,6 +357,7 @@
     const telaMeusGrupos = document.getElementById("tela-meus-grupos");
     const telaImpulsionar = document.getElementById("tela-impulsionar");
     const telaChatImpulsionar = document.getElementById("tela-chat-impulsionar");
+    const painelAdmin = document.getElementById("painel-admin-impulsionar");
 
     function esconderTelas() {
       if (intervalVerificacao) {
@@ -320,6 +373,12 @@
       telaMeusGrupos.classList.add("escondido");
       telaImpulsionar.classList.add("escondido");
       telaChatImpulsionar.classList.add("escondido");
+    }
+
+    function formatarTipoText(tipo) {
+      if (tipo === 'reels') return 'Reels / Vídeo Insta';
+      if (tipo === 'instagram_grupo') return 'Grupo Instagram';
+      return 'Grupo WhatsApp';
     }
 
     // Checa a cada 3 segundos se o e-mail foi verificado
@@ -378,17 +437,13 @@
       } catch (err) { alert("Erro de login: " + err.message); }
     });
 
-    // Cadastro + Envio de E-mail de Verificação
+    // Cadastro
     document.getElementById("form-cadastro").addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, document.getElementById("email-cadastro").value, document.getElementById("senha-cadastro").value);
         const user = userCredential.user;
-        
-        // Envia o e-mail de confirmação
         await sendEmailVerification(user);
-        
-        // Entra na tela de espera com o timer
         iniciarVerificacaoAutomatica(user);
       } catch (err) { alert("Erro de cadastro: " + err.message); }
     });
@@ -425,9 +480,10 @@
     document.getElementById("btn-voltar-meus").addEventListener("click", () => { esconderTelas(); telaMeusGrupos.classList.remove("escondido"); });
     document.getElementById("btn-fechar-chat").addEventListener("click", () => { esconderTelas(); telaMeusGrupos.classList.remove("escondido"); });
 
-    // Salvar Novo Grupo no Database
+    // Salvar Nova Publicação no Database
     document.getElementById("form-criar-grupo").addEventListener("submit", async (e) => {
       e.preventDefault();
+      const tipo = document.getElementById("tipo-link").value;
       const nome = document.getElementById("nome-grupo").value;
       const link = document.getElementById("link-grupo").value;
       const regras = document.getElementById("regras-grupo").value;
@@ -435,40 +491,45 @@
       try {
         const gruposRef = ref(db, 'grupos');
         await push(gruposRef, {
+          tipo: tipo,
           nome: nome,
           link: link,
           regras: regras,
           criadoPor: usuarioAtual.email,
           impulsionado: false
         });
-        alert("Grupo publicado com sucesso!");
+        alert("Publicado com sucesso!");
         document.getElementById("form-criar-grupo").reset();
         esconderTelas();
         telaGrupos.classList.remove("escondido");
-      } catch (err) { alert("Erro ao criar grupo: " + err.message); }
+      } catch (err) { alert("Erro ao publicar: " + err.message); }
     });
 
-    // Carregar Lista Geral de Grupos
+    // Carregar Lista Geral de Grupos/Reels
     function carregarGruposGerais() {
       const gruposRef = ref(db, 'grupos');
       onValue(gruposRef, (snapshot) => {
         const container = document.getElementById("lista-grupos-geral");
         container.innerHTML = "";
         if (!snapshot.exists()) {
-          container.innerHTML = "<p>Nenhum grupo cadastrado ainda.</p>";
+          container.innerHTML = "<p>Nenhum item cadastrado ainda.</p>";
           return;
         }
 
         const dados = snapshot.val();
         const lista = Object.keys(dados).map(key => ({ id: key, ...dados[key] }));
-        lista.sort((a, b) => b.impulsionado - a.impulsionado);
+        lista.sort((a, b) => (b.impulsionado ? 1 : 0) - (a.impulsionado ? 1 : 0));
 
         lista.forEach(g => {
           const card = document.createElement("div");
           card.className = "card-grupo";
+          
+          const tipoTexto = formatarTipoText(g.tipo);
+
           card.innerHTML = `
             ${g.impulsionado ? '<span class="badge-destaque">IMPULSIONADO</span>' : ''}
-            <h4 style="margin:0 0 5px 0;">${g.nome}</h4>
+            <span class="badge-tipo">${tipoTexto}</span>
+            <h4 style="margin:5px 0;">${g.nome}</h4>
             <p style="font-size:12px; color:#555; margin:0 0 10px 0;">Por: ${g.criadoPor}</p>
             <button class="btn-secundario" style="width:100%;">Abrir</button>
           `;
@@ -478,19 +539,30 @@
       });
     }
 
-    // Exibir Regras antes de Redirecionar para o WhatsApp
+    // Exibir Regras/Detalhes
     function abrirRegrasGrupo(grupo) {
+      document.getElementById("detalhe-tipo-badge").textContent = formatarTipoText(grupo.tipo);
       document.getElementById("detalhe-nome-grupo").textContent = grupo.nome;
       document.getElementById("detalhe-criador-grupo").textContent = grupo.criadoPor;
       document.getElementById("detalhe-regras-box").textContent = grupo.regras;
-      linkWhatsappSelecionado = grupo.link;
+      
+      const btnAbrir = document.getElementById("btn-entrar-whatsapp");
+      if (grupo.tipo === 'reels') {
+        btnAbrir.textContent = "Abrir Reels no Instagram";
+      } else if (grupo.tipo === 'instagram_grupo') {
+        btnAbrir.textContent = "Abrir Grupo no Instagram";
+      } else {
+        btnAbrir.textContent = "Abrir Grupo no WhatsApp";
+      }
+
+      linkSelecionado = grupo.link;
       esconderTelas();
       telaRegrasGrupo.classList.remove("escondido");
     }
 
     document.getElementById("btn-entrar-whatsapp").addEventListener("click", () => {
-      if (linkWhatsappSelecionado) {
-        window.open(linkWhatsappSelecionado, "_blank");
+      if (linkSelecionado) {
+        window.open(linkSelecionado, "_blank");
       }
     });
 
@@ -501,7 +573,7 @@
         const container = document.getElementById("lista-meus-grupos");
         container.innerHTML = "";
         if (!snapshot.exists()) {
-          container.innerHTML = "<p>Você não criou nenhum grupo.</p>";
+          container.innerHTML = "<p>Você não possui publicações.</p>";
           return;
         }
 
@@ -515,9 +587,10 @@
             const card = document.createElement("div");
             card.className = "card-grupo";
             card.innerHTML = `
-              <h4 style="margin:0 0 5px 0;">${g.nome}</h4>
+              <span class="badge-tipo">${formatarTipoText(g.tipo)}</span>
+              <h4 style="margin:5px 0;">${g.nome}</h4>
               <p style="font-size:12px; margin:0 0 8px 0;">Status: <strong>${g.impulsionado ? 'Impulsionado' : 'Padrão'}</strong></p>
-              <button class="btn-impulsionar">Impulsionar</button>
+              <button class="btn-impulsionar">Impulsionar / Chat</button>
             `;
             card.querySelector("button").addEventListener("click", () => {
               grupoSelecionadoParaImpulsionar = key;
@@ -528,7 +601,7 @@
           }
         });
 
-        if (!encontrou) container.innerHTML = "<p>Você não possui grupos criados.</p>";
+        if (!encontrou) container.innerHTML = "<p>Você não possui itens criados.</p>";
       }, { onlyOnce: true });
     }
 
@@ -536,15 +609,50 @@
     window.selecionarPlano = function(plano) {
       esconderTelas();
       telaChatImpulsionar.classList.remove("escondido");
+      
+      // Verifica se é o admin logado para exibir o painel de aprovação
+      if (usuarioAtual && usuarioAtual.email === EMAIL_ADMIN) {
+        painelAdmin.classList.remove("escondido");
+      } else {
+        painelAdmin.classList.add("escondido");
+      }
+
       const chatBox = document.getElementById("chat-mensagens");
       chatBox.innerHTML += `
         <div class="balao-chat balao-sistema">
-          Você selecionou o plano <strong>${plano}</strong>. Envie seu comprovante PIX abaixo para validação.
+          Você escolheu o <strong>${plano}</strong>. Envie o comprovante do pagamento para validação do Admin.
         </div>
       `;
     };
 
-    // Chat Simulado
+    // Função Exclusiva de Admin para Impulsionar no Firebase
+    window.adminAprovarImpulsionamento = async function(dias) {
+      if (!grupoSelecionadoParaImpulsionar) {
+        alert("Nenhum item selecionado!");
+        return;
+      }
+
+      try {
+        const itemRef = ref(db, `grupos/${grupoSelecionadoParaImpulsionar}`);
+        await update(itemRef, {
+          impulsionado: true,
+          diasImpulsionados: dias
+        });
+
+        const chatBox = document.getElementById("chat-mensagens");
+        chatBox.innerHTML += `
+          <div class="balao-chat balao-sistema" style="background:#d4edda; border:1px solid #c3e6cb; color:#155724;">
+            <strong>Parabéns! Seu grupo está impulsionado por ${dias} dia(s).</strong>
+          </div>
+        `;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        alert(`Sucesso! O grupo foi impulsionado por ${dias} dia(s).`);
+      } catch (err) {
+        alert("Erro ao impulsionar: " + err.message);
+      }
+    };
+
+    // Chat de Envio de Mensagens
     document.getElementById("form-chat").addEventListener("submit", (e) => {
       e.preventDefault();
       const input = document.getElementById("input-msg");
@@ -552,15 +660,13 @@
       if (!texto) return;
 
       const chatBox = document.getElementById("chat-mensagens");
-      chatBox.innerHTML += `<div class="balao-chat balao-usuario">${texto}</div>`;
+      chatBox.innerHTML += `<div class="balao-chat balao-usuario"><strong>${usuarioAtual.email}:</strong> ${texto}</div>`;
       input.value = "";
 
-      setTimeout(() => {
-        chatBox.innerHTML += `<div class="balao-chat balao-sistema">Comprovante em análise. Seu grupo será impulsionado em breve!</div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
-      }, 1000);
+      chatBox.scrollTop = chatBox.scrollHeight;
     });
   </script>
 
 </body>
 </html>
+
