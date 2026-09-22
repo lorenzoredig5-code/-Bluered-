@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -69,6 +67,8 @@
     .btn-secundario:hover { background-color: #0056b3; }
     .btn-impulsionar { background-color: #ff9900; }
     .btn-impulsionar:hover { background-color: #e68a00; }
+    .btn-ventilador { background-color: #6f42c1; }
+    .btn-ventilador:hover { background-color: #5a32a3; }
     .btn-admin { background-color: #28a745; margin-top: 5px; }
     .btn-admin:hover { background-color: #218838; }
     .btn-reset { background-color: #ffc107; color: #212529; }
@@ -177,6 +177,14 @@
       border-radius: 6px;
       margin-top: 10px;
       text-align: center;
+    }
+
+    .box-metodo-pagamento {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -291,20 +299,58 @@
       
       <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
         <strong>Plano 1 Dia</strong> - R$ 2,00
-        <button class="btn-impulsionar" onclick="selecionarPlano('1 Dia (R$ 2,00)')">Comprar 1 Dia</button>
+        <button class="btn-impulsionar" onclick="selecionarPlano('1 Dia', 2, 1)">Escolher Plano (R$ 2,00)</button>
       </div>
 
       <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
         <strong>Plano 5 Dias</strong> - R$ 8,00
-        <button class="btn-impulsionar" onclick="selecionarPlano('5 Dias (R$ 8,00)')">Comprar 5 Dias</button>
+        <button class="btn-impulsionar" onclick="selecionarPlano('5 Dias', 8, 5)">Escolher Plano (R$ 8,00)</button>
       </div>
 
       <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
         <strong>Plano 1 Mês (30 Dias)</strong> - R$ 30,00
-        <button class="btn-impulsionar" onclick="selecionarPlano('1 Mês (R$ 30,00)')">Comprar 1 Mês</button>
+        <button class="btn-impulsionar" onclick="selecionarPlano('1 Mês', 30, 30)">Escolher Plano (R$ 30,00)</button>
       </div>
 
       <button type="button" class="btn-sair" id="btn-voltar-meus" style="width:100%;">Cancelar</button>
+    </div>
+
+    <!-- TELA: ESCOLHER FORMA DE PAGAMENTO DO IMPULSIONAMENTO -->
+    <div id="tela-opcao-pagamento" class="escondido">
+      <h3>Forma de Pagamento</h3>
+      <p style="font-size:13px; color:#555;">Plano Escolhido: <strong id="lbl-plano-nome"></strong> (<span id="lbl-plano-preco"></span>)</p>
+
+      <div class="box-metodo-pagamento">
+        <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold;">Opção 1: Pagar com Ventilador Pay</p>
+        <button class="btn-ventilador" id="btn-pagar-ventilador-pay">Pagar com Ventilador Pay</button>
+      </div>
+
+      <div class="box-metodo-pagamento">
+        <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold;">Opção 2: Pagar pelo Chat (PIX)</p>
+        <button class="btn-impulsionar" id="btn-pagar-chat">Pagar pelo Chat (PIX)</button>
+      </div>
+
+      <button type="button" class="btn-sair" id="btn-voltar-opcoes-pagamento" style="width:100%; margin-top:15px;">Voltar aos Planos</button>
+    </div>
+
+    <!-- TELA: PAGAMENTO VIA VENTILADOR PAY -->
+    <div id="tela-ventilador-pay" class="escondido">
+      <h3>Pagar com Ventilador Pay</h3>
+      
+      <div style="background:#eef2ff; border:1px solid #c7d2fe; padding:12px; border-radius:6px; text-align:left; font-size:13px; margin-bottom:15px;">
+        <p style="margin:0 0 8px 0;"><strong>Valor a Pagar:</strong> R$ <span id="vpay-valor"></span>,00</p>
+        <p style="margin:0 0 8px 0;"><strong>E-mail de Destino no Ventilador Pay:</strong></p>
+        <div style="background:#fff; padding:6px; border:1px solid #ccc; font-weight:bold; font-size:12px; word-break:break-all;" id="vpay-email-destino">lorenzoredig5@gmail.com</div>
+        <p style="font-size:11px; color:#555; margin:8px 0 0 0;">Faça a transferência deste valor exato no Ventilador Pay para o e-mail acima.</p>
+      </div>
+
+      <form id="form-ventilador-pay">
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">Informe o ID da Transação:</label>
+        <input type="text" id="input-id-transacao" placeholder="Por favor, bote o ID da transação" required />
+        <button type="submit" class="btn-ventilador">Validar Pagamento e Impulsionar</button>
+      </form>
+
+      <button type="button" class="btn-sair" id="btn-cancelar-vpay" style="width:100%; margin-top:10px;">Voltar</button>
     </div>
 
     <!-- TELA: CHAT DO IMPULSIONAMENTO (SUPORTE / ADMIN) -->
@@ -349,7 +395,7 @@
       onAuthStateChanged 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
-      getDatabase, ref, push, onValue, update 
+      getDatabase, ref, push, onValue, update, get
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -370,6 +416,7 @@
 
     let usuarioAtual = null;
     let grupoSelecionadoParaImpulsionar = null;
+    let planoSelecionado = { nome: '', preco: 0, dias: 0 };
     let linkSelecionado = "";
     let intervalVerificacao = null;
 
@@ -386,6 +433,8 @@
     const telaRegrasGrupo = document.getElementById("tela-regras-grupo");
     const telaMeusGrupos = document.getElementById("tela-meus-grupos");
     const telaImpulsionar = document.getElementById("tela-impulsionar");
+    const telaOpcaoPagamento = document.getElementById("tela-opcao-pagamento");
+    const telaVentiladorPay = document.getElementById("tela-ventilador-pay");
     const telaChatImpulsionar = document.getElementById("tela-chat-impulsionar");
 
     const btnAdminPedidos = document.getElementById("btn-admin-pedidos");
@@ -405,6 +454,8 @@
       telaRegrasGrupo.classList.add("escondido");
       telaMeusGrupos.classList.add("escondido");
       telaImpulsionar.classList.add("escondido");
+      telaOpcaoPagamento.classList.add("escondido");
+      telaVentiladorPay.classList.add("escondido");
       telaChatImpulsionar.classList.add("escondido");
     }
 
@@ -519,6 +570,8 @@
     document.getElementById("btn-abrir-meus").addEventListener("click", () => { carregarMeusGrupos(); esconderTelas(); telaMeusGrupos.classList.remove("escondido"); });
     document.getElementById("btn-voltar-inicio-meus").addEventListener("click", () => { esconderTelas(); telaGrupos.classList.remove("escondido"); });
     document.getElementById("btn-voltar-meus").addEventListener("click", () => { esconderTelas(); telaMeusGrupos.classList.remove("escondido"); });
+    document.getElementById("btn-voltar-opcoes-pagamento").addEventListener("click", () => { esconderTelas(); telaImpulsionar.classList.remove("escondido"); });
+    document.getElementById("btn-cancelar-vpay").addEventListener("click", () => { esconderTelas(); telaOpcaoPagamento.classList.remove("escondido"); });
     document.getElementById("btn-fechar-chat").addEventListener("click", () => { esconderTelas(); telaMeusGrupos.classList.remove("escondido"); });
     document.getElementById("btn-admin-pedidos").addEventListener("click", () => { carregarPedidosAdmin(); esconderTelas(); telaAdminPedidos.classList.remove("escondido"); });
     document.getElementById("btn-voltar-admin").addEventListener("click", () => { esconderTelas(); telaGrupos.classList.remove("escondido"); });
@@ -638,7 +691,7 @@
               <span class="badge-tipo">${formatarTipoText(g.tipo)}</span>
               <h4 style="margin:5px 0; display:flex; align-items:center;">${g.nome} ${seloVerificado}</h4>
               <p style="font-size:12px; margin:0 0 8px 0;">Status: <strong>${g.impulsionado ? 'Impulsionado / Verificado' : 'Padrão'}</strong></p>
-              <button class="btn-impulsionar">Impulsionar / Chat</button>
+              <button class="btn-impulsionar">Impulsionar / Pagar</button>
             `;
             card.querySelector("button").addEventListener("click", () => {
               grupoSelecionadoParaImpulsionar = key;
@@ -685,12 +738,29 @@
       }, { onlyOnce: true });
     }
 
-    // Seleção de Plano de Impulsionamento
-    window.selecionarPlano = function(plano) {
+    // Seleção do Plano
+    window.selecionarPlano = function(nome, preco, dias) {
+      planoSelecionado = { nome, preco, dias };
+      document.getElementById("lbl-plano-nome").textContent = nome;
+      document.getElementById("lbl-plano-preco").textContent = `R$ ${preco},00`;
+
+      esconderTelas();
+      telaOpcaoPagamento.classList.remove("escondido");
+    };
+
+    // Botão de Ir para Pagamento Ventilador Pay
+    document.getElementById("btn-pagar-ventilador-pay").addEventListener("click", () => {
+      document.getElementById("vpay-valor").textContent = planoSelecionado.preco;
+      document.getElementById("input-id-transacao").value = "";
+      esconderTelas();
+      telaVentiladorPay.classList.remove("escondido");
+    });
+
+    // Botão de Ir para Chat
+    document.getElementById("btn-pagar-chat").addEventListener("click", () => {
       esconderTelas();
       telaChatImpulsionar.classList.remove("escondido");
       
-      // Exibe painel se for admin
       if (usuarioAtual && usuarioAtual.email === EMAIL_ADMIN) {
         painelAdmin.classList.remove("escondido");
       } else {
@@ -700,10 +770,61 @@
       const chatBox = document.getElementById("chat-mensagens");
       chatBox.innerHTML += `
         <div class="balao-chat balao-sistema">
-          Você escolheu o <strong>${plano}</strong>. Envie o comprovante do pagamento para validação do Admin.
+          Você escolheu o plano <strong>${planoSelecionado.nome} (R$ ${planoSelecionado.preco},00)</strong>. Envie o comprovante do pagamento para validação do Admin.
         </div>
       `;
-    };
+    });
+
+    // Validação da Transação no Ventilador Pay
+    document.getElementById("form-ventilador-pay").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const idTransacao = document.getElementById("input-id-transacao").value.trim();
+
+      if (!idTransacao) {
+        alert("Por favor, digite o ID da transação!");
+        return;
+      }
+
+      if (!grupoSelecionadoParaImpulsionar) {
+        alert("Erro: Nenhum grupo/publicação selecionado.");
+        return;
+      }
+
+      try {
+        // Verificar se o ID de transação já foi utilizado anteriormente
+        const transacaoRef = ref(db, `transacoes_usadas/${idTransacao}`);
+        const snapshot = await get(transacaoRef);
+
+        if (snapshot.exists()) {
+          alert("Este ID de transação já foi utilizado! Cada transação só pode ser usada uma única vez.");
+          return;
+        }
+
+        // Marcar o ID da transação como utilizado no banco de dados
+        await update(ref(db, `transacoes_usadas`), {
+          [idTransacao]: {
+            usuario: usuarioAtual.email,
+            grupoId: grupoSelecionadoParaImpulsionar,
+            valor: planoSelecionado.preco,
+            dias: planoSelecionado.dias,
+            data: new Date().toISOString()
+          }
+        });
+
+        // Impulsionar o grupo/publicação
+        const grupoRef = ref(db, `grupos/${grupoSelecionadoParaImpulsionar}`);
+        await update(grupoRef, {
+          impulsionado: true,
+          diasImpulsionados: planoSelecionado.dias
+        });
+
+        alert("Transação verificada com sucesso! Seu grupo foi impulsionado!");
+        esconderTelas();
+        telaGrupos.classList.remove("escondido");
+      } catch (err) {
+        alert("Erro ao validar transação: " + err.message);
+      }
+    });
 
     // Função Exclusiva do Admin para Aprovar Impulsionamento Direto no Chat
     window.adminAprovarImpulsionamento = async function(dias) {
