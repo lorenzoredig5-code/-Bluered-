@@ -802,7 +802,7 @@
       `;
     });
 
-    // Função robusta ajustada para buscar no FIRESTORE ignorando maiúsculas/minúsculas
+    // Função robusta varrendo a coleção de IDs do Firestore
     async function processarPagamentoVentiladorPayFirestore(emailInput, pinInput, valorPlano) {
       const emailLimp = emailInput.trim().toLowerCase();
       const pinLimp = String(pinInput).trim();
