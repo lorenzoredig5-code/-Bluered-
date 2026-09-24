@@ -88,10 +88,10 @@
       border: 4px solid #f3f3f3;
       border-top: 4px solid #007bff;
       border-radius: 50%;
-      width: 30px;
-      height: 30px;
+      width: 38px;
+      height: 38px;
       animation: spin 1s linear infinite;
-      margin: 15px auto 0 auto;
+      margin: 15px auto;
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -185,6 +185,23 @@
       border-radius: 6px;
       padding: 15px;
       margin-top: 10px;
+    }
+
+    .card-sucesso {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .card-sucesso h3 {
+      margin-top: 0;
+      color: #155724;
+    }
+    .icone-sucesso {
+      font-size: 50px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -333,24 +350,51 @@
       <button type="button" class="btn-sair" id="btn-voltar-opcoes-pagamento" style="width:100%; margin-top:15px;">Voltar aos Planos</button>
     </div>
 
-    <!-- TELA: PAGAMENTO VIA VENTILADOR PAY -->
+    <!-- TELA: PAGAMENTO VIA VENTILADOR PAY (DADOS DA CONTA) -->
     <div id="tela-ventilador-pay" class="escondido">
       <h3>Pagar com Ventilador Pay</h3>
       
       <div style="background:#eef2ff; border:1px solid #c7d2fe; padding:12px; border-radius:6px; text-align:left; font-size:13px; margin-bottom:15px;">
-        <p style="margin:0 0 8px 0;"><strong>Valor a Pagar:</strong> R$ <span id="vpay-valor"></span>,00</p>
-        <p style="margin:0 0 8px 0;"><strong>E-mail de Destino no Ventilador Pay:</strong></p>
-        <div style="background:#fff; padding:6px; border:1px solid #ccc; font-weight:bold; font-size:12px; word-break:break-all;" id="vpay-email-destino">lorenzoredig5@gmail.com</div>
-        <p style="font-size:11px; color:#555; margin:8px 0 0 0;">Faça a transferência deste valor exato no Ventilador Pay para o e-mail acima.</p>
+        <p style="margin:0 0 6px 0;"><strong>Plano:</strong> <span id="vpay-plano-nome"></span></p>
+        <p style="margin:0;"><strong>Valor a Pagar:</strong> R$ <span id="vpay-valor"></span>,00</p>
+        <p style="font-size:11px; color:#555; margin:8px 0 0 0;">Informe os dados da sua conta Ventilador Pay para debitar do seu saldo.</p>
       </div>
 
       <form id="form-ventilador-pay">
-        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">Informe o ID da Transação:</label>
-        <input type="text" id="input-id-transacao" placeholder="Por favor, bote o ID da transação" required />
-        <button type="submit" class="btn-ventilador">Validar Pagamento e Impulsionar</button>
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">Nome da Conta:</label>
+        <input type="text" id="vpay-nome-conta" placeholder="Digite o nome titular da conta" required />
+
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">CPF da Conta:</label>
+        <input type="text" id="vpay-cpf-conta" placeholder="000.000.000-00" required />
+
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">PIN da Conta:</label>
+        <input type="password" id="vpay-pin-conta" placeholder="PIN de compras" maxlength="8" required />
+
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">Senha da Conta:</label>
+        <input type="password" id="vpay-senha-conta" placeholder="Senha de acesso" required />
+
+        <button type="submit" class="btn-ventilador">Comprar / Confirmar Pagamento</button>
       </form>
 
       <button type="button" class="btn-sair" id="btn-cancelar-vpay" style="width:100%; margin-top:10px;">Voltar</button>
+    </div>
+
+    <!-- TELA: CARREGANDO PAGAMENTO VENTILADOR PAY -->
+    <div id="tela-vpay-carregando" class="escondido" style="text-align:center;">
+      <h3>Processando Pagamento</h3>
+      <p style="font-size:13px; color:#555;">Verificando conta e saldo no Ventilador Pay...</p>
+      <div class="loader"></div>
+      <p style="font-size:12px; color:#888; margin-top:10px;">Aguarde, confirmando a transação...</p>
+    </div>
+
+    <!-- TELA: SUCESSO DE COMPRA VENTILADOR PAY -->
+    <div id="tela-vpay-sucesso" class="escondido">
+      <div class="card-sucesso">
+        <div class="icone-sucesso">🎉</div>
+        <h3>Comprado com Sucesso!</h3>
+        <p style="font-size:14px; margin-bottom:15px;">Seu pagamento foi confirmado com sucesso e sua publicação foi impulsionada!</p>
+        <button type="button" class="btn-secundario" id="btn-sucesso-ir-inicio" style="width:100%;">Ir para o Início</button>
+      </div>
     </div>
 
     <!-- TELA: CHAT DO IMPULSIONAMENTO (SUPORTE / ADMIN) -->
@@ -398,7 +442,8 @@
       getDatabase, ref, push, onValue, update, get
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    const firebaseConfig = {
+    // Configuração do Firebase - Bluered
+    const firebaseConfigBluered = {
       apiKey: "AIzaSyCDSZaI0FNuVTLGLru7M5Upm4l04B6LcXU",
       authDomain: "bluered-8832d.firebaseapp.com",
       databaseURL: "https://bluered-8832d-default-rtdb.firebaseio.com",
@@ -408,9 +453,25 @@
       appId: "1:622735655294:web:ab950b5a71883f1eb4b32f"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
+    // Configuração do Firebase - Ventilador Pay
+    const firebaseConfigVentilador = {
+      apiKey: "AIzaSyArC872DnSB3EBLNpl-Lxajo9rEbS2UlCc",
+      authDomain: "ventilador-pay.firebaseapp.com",
+      databaseURL: "https://ventilador-pay-default-rtdb.firebaseio.com",
+      projectId: "ventilador-pay",
+      storageBucket: "ventilador-pay.firebasestorage.app",
+      messagingSenderId: "466899508532",
+      appId: "1:466899508532:web:54c147a36cc115039e5961",
+      measurementId: "G-DBLHR13NDB"
+    };
+
+    // Inicialização das duas instâncias do Firebase
+    const appBluered = initializeApp(firebaseConfigBluered, "blueredApp");
+    const appVentilador = initializeApp(firebaseConfigVentilador, "ventiladorApp");
+
+    const auth = getAuth(appBluered);
+    const db = getDatabase(appBluered);
+    const dbVPay = getDatabase(appVentilador);
 
     const EMAIL_ADMIN = "lorenzoredig5@gmail.com";
 
@@ -435,6 +496,8 @@
     const telaImpulsionar = document.getElementById("tela-impulsionar");
     const telaOpcaoPagamento = document.getElementById("tela-opcao-pagamento");
     const telaVentiladorPay = document.getElementById("tela-ventilador-pay");
+    const telaVpayCarregando = document.getElementById("tela-vpay-carregando");
+    const telaVpaySucesso = document.getElementById("tela-vpay-sucesso");
     const telaChatImpulsionar = document.getElementById("tela-chat-impulsionar");
 
     const btnAdminPedidos = document.getElementById("btn-admin-pedidos");
@@ -456,6 +519,8 @@
       telaImpulsionar.classList.add("escondido");
       telaOpcaoPagamento.classList.add("escondido");
       telaVentiladorPay.classList.add("escondido");
+      telaVpayCarregando.classList.add("escondido");
+      telaVpaySucesso.classList.add("escondido");
       telaChatImpulsionar.classList.add("escondido");
     }
 
@@ -494,7 +559,6 @@
           userEmailDisplay.textContent = user.email;
           barUsuario.classList.remove("escondido");
           
-          // Exibe botão de admin se for o e-mail cadastrado
           if (user.email === EMAIL_ADMIN) {
             btnAdminPedidos.classList.remove("escondido");
           } else {
@@ -575,8 +639,9 @@
     document.getElementById("btn-fechar-chat").addEventListener("click", () => { esconderTelas(); telaMeusGrupos.classList.remove("escondido"); });
     document.getElementById("btn-admin-pedidos").addEventListener("click", () => { carregarPedidosAdmin(); esconderTelas(); telaAdminPedidos.classList.remove("escondido"); });
     document.getElementById("btn-voltar-admin").addEventListener("click", () => { esconderTelas(); telaGrupos.classList.remove("escondido"); });
+    document.getElementById("btn-sucesso-ir-inicio").addEventListener("click", () => { carregarGruposGerais(); esconderTelas(); telaGrupos.classList.remove("escondido"); });
 
-    // Salvar Nova Publicação no Database
+    // Salvar Nova Publicação no Database Bluered
     document.getElementById("form-criar-grupo").addEventListener("submit", async (e) => {
       e.preventDefault();
       const tipo = document.getElementById("tipo-link").value;
@@ -750,8 +815,13 @@
 
     // Botão de Ir para Pagamento Ventilador Pay
     document.getElementById("btn-pagar-ventilador-pay").addEventListener("click", () => {
+      document.getElementById("vpay-plano-nome").textContent = planoSelecionado.nome;
       document.getElementById("vpay-valor").textContent = planoSelecionado.preco;
-      document.getElementById("input-id-transacao").value = "";
+      document.getElementById("vpay-nome-conta").value = "";
+      document.getElementById("vpay-cpf-conta").value = "";
+      document.getElementById("vpay-pin-conta").value = "";
+      document.getElementById("vpay-senha-conta").value = "";
+      
       esconderTelas();
       telaVentiladorPay.classList.remove("escondido");
     });
@@ -775,54 +845,135 @@
       `;
     });
 
-    // Validação da Transação no Ventilador Pay
+    // Processador de Validação e Débito no Banco do Ventilador Pay
+    async function processarPagamentoVentiladorPay(nomeInput, cpfInput, pinInput, senhaInput, valorPlano) {
+      const cpfLimp = cpfInput.replace(/\D/g, '');
+      const nomeLimp = nomeInput.trim().toLowerCase();
+
+      // Nós possíveis de cadastro no banco do Ventilador Pay
+      const nodesToSearch = ['usuarios', 'contas', 'users'];
+      let contaEncontrada = null;
+      let nodePath = null;
+      let contaKey = null;
+
+      for (const node of nodesToSearch) {
+        try {
+          const snapshot = await get(ref(dbVPay, node));
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            for (const key in data) {
+              const u = data[key];
+              if (!u) continue;
+
+              const userCpf = u.cpf ? String(u.cpf).replace(/\D/g, '') : (u.cpf_conta ? String(u.cpf_conta).replace(/\D/g, '') : '');
+              const userNome = u.nome ? String(u.nome).trim().toLowerCase() : (u.nome_conta ? String(u.nome_conta).trim().toLowerCase() : '');
+              const userEmail = u.email ? String(u.email).trim().toLowerCase() : '';
+
+              if ((cpfLimp && userCpf === cpfLimp) || (nomeLimp && (userNome === nomeLimp || userEmail === nomeLimp))) {
+                contaEncontrada = u;
+                nodePath = node;
+                contaKey = key;
+                break;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("Erro ao buscar nó:", node, err);
+        }
+        if (contaEncontrada) break;
+      }
+
+      if (!contaEncontrada) {
+        return { sucesso: false, erro: "Conta não encontrada no Ventilador Pay com o Nome/CPF fornecido." };
+      }
+
+      // Validação de PIN e Senha
+      const pinCadastrado = String(contaEncontrada.pin || contaEncontrada.pin_conta || '');
+      const senhaCadastrada = String(contaEncontrada.senha || contaEncontrada.password || '');
+
+      if (pinCadastrado && pinCadastrado !== pinInput.trim()) {
+        return { sucesso: false, erro: "PIN incorreto!" };
+      }
+
+      if (senhaCadastrada && senhaCadastrada !== senhaInput.trim()) {
+        return { sucesso: false, erro: "Senha incorreta!" };
+      }
+
+      // Verificação de Saldo
+      const saldoAtual = Number(contaEncontrada.saldo || contaEncontrada.saldo_conta || 0);
+
+      if (isNaN(saldoAtual) || saldoAtual < valorPlano) {
+        return { 
+          sucesso: false, 
+          erro: `Saldo insuficiente no Ventilador Pay. Seu saldo atual é R$ ${saldoAtual.toFixed(2)}, mas o plano custa R$ ${valorPlano.toFixed(2)}.` 
+        };
+      }
+
+      // Debitar do Saldo do Usuário no Ventilador Pay
+      const novoSaldo = saldoAtual - valorPlano;
+      const campoSaldo = ('saldo_conta' in contaEncontrada) ? 'saldo_conta' : 'saldo';
+
+      await update(ref(dbVPay, `${nodePath}/${contaKey}`), {
+        [campoSaldo]: novoSaldo
+      });
+
+      // Registrar Histórico no Ventilador Pay
+      try {
+        await push(ref(dbVPay, 'transacoes'), {
+          usuario: contaEncontrada.nome || contaEncontrada.email || cpfInput,
+          valor: valorPlano,
+          tipo: 'compra_impulsionamento_bluered',
+          data: new Date().toISOString()
+        });
+      } catch (e) {
+        console.log("Transação processada, registro opcional omitido.");
+      }
+
+      return { sucesso: true, novoSaldo };
+    }
+
+    // Formulário de Submissão do Ventilador Pay
     document.getElementById("form-ventilador-pay").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const idTransacao = document.getElementById("input-id-transacao").value.trim();
 
-      if (!idTransacao) {
-        alert("Por favor, digite o ID da transação!");
-        return;
-      }
+      const nome = document.getElementById("vpay-nome-conta").value.trim();
+      const cpf = document.getElementById("vpay-cpf-conta").value.trim();
+      const pin = document.getElementById("vpay-pin-conta").value.trim();
+      const senha = document.getElementById("vpay-senha-conta").value.trim();
 
       if (!grupoSelecionadoParaImpulsionar) {
         alert("Erro: Nenhum grupo/publicação selecionado.");
         return;
       }
 
-      try {
-        // Verificar se o ID de transação já foi utilizado anteriormente
-        const transacaoRef = ref(db, `transacoes_usadas/${idTransacao}`);
-        const snapshot = await get(transacaoRef);
+      // Exibir Tela Carregando
+      esconderTelas();
+      telaVpayCarregando.classList.remove("escondido");
 
-        if (snapshot.exists()) {
-          alert("Este ID de transação já foi utilizado! Cada transação só pode ser usada uma única vez.");
+      try {
+        const resultado = await processarPagamentoVentiladorPay(nome, cpf, pin, senha, planoSelecionado.preco);
+
+        if (!resultado.sucesso) {
+          alert("Falha na Compra: " + resultado.erro);
+          esconderTelas();
+          telaVentiladorPay.classList.remove("escondido");
           return;
         }
 
-        // Marcar o ID da transação como utilizado no banco de dados
-        await update(ref(db, `transacoes_usadas`), {
-          [idTransacao]: {
-            usuario: usuarioAtual.email,
-            grupoId: grupoSelecionadoParaImpulsionar,
-            valor: planoSelecionado.preco,
-            dias: planoSelecionado.dias,
-            data: new Date().toISOString()
-          }
-        });
-
-        // Impulsionar o grupo/publicação
+        // Se o débito deu certo no Ventilador Pay, impulsionar publicação no Bluered
         const grupoRef = ref(db, `grupos/${grupoSelecionadoParaImpulsionar}`);
         await update(grupoRef, {
           impulsionado: true,
           diasImpulsionados: planoSelecionado.dias
         });
 
-        alert("Transação verificada com sucesso! Seu grupo foi impulsionado!");
+        // Mostrar Tela de Sucesso
         esconderTelas();
-        telaGrupos.classList.remove("escondido");
+        telaVpaySucesso.classList.remove("escondido");
       } catch (err) {
-        alert("Erro ao validar transação: " + err.message);
+        alert("Erro no processamento: " + err.message);
+        esconderTelas();
+        telaVentiladorPay.classList.remove("escondido");
       }
     });
 
