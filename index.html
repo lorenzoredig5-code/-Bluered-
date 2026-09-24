@@ -357,21 +357,18 @@
       <div style="background:#eef2ff; border:1px solid #c7d2fe; padding:12px; border-radius:6px; text-align:left; font-size:13px; margin-bottom:15px;">
         <p style="margin:0 0 6px 0;"><strong>Plano:</strong> <span id="vpay-plano-nome"></span></p>
         <p style="margin:0;"><strong>Valor a Pagar:</strong> R$ <span id="vpay-valor"></span>,00</p>
-        <p style="font-size:11px; color:#555; margin:8px 0 0 0;">Informe os dados da sua conta Ventilador Pay para debitar do seu saldo.</p>
+        <p style="font-size:11px; color:#555; margin:8px 0 0 0;">Informe os dados da sua conta no Ventilador Pay para debitar do seu saldo.</p>
       </div>
 
       <form id="form-ventilador-pay">
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">E-mail da Conta Ventilador Pay:</label>
+        <input type="email" id="vpay-email-conta" placeholder="Digite seu e-mail cadastrado no Ventilador Pay" required />
+
         <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">Nome da Conta:</label>
         <input type="text" id="vpay-nome-conta" placeholder="Digite o nome titular da conta" required />
 
         <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">CPF da Conta:</label>
         <input type="text" id="vpay-cpf-conta" placeholder="000.000.000-00" required />
-
-        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">PIN da Conta:</label>
-        <input type="password" id="vpay-pin-conta" placeholder="PIN de compras" maxlength="8" required />
-
-        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">Senha da Conta:</label>
-        <input type="password" id="vpay-senha-conta" placeholder="Senha de acesso" required />
 
         <button type="submit" class="btn-ventilador">Comprar / Confirmar Pagamento</button>
       </form>
@@ -817,10 +814,9 @@
     document.getElementById("btn-pagar-ventilador-pay").addEventListener("click", () => {
       document.getElementById("vpay-plano-nome").textContent = planoSelecionado.nome;
       document.getElementById("vpay-valor").textContent = planoSelecionado.preco;
+      document.getElementById("vpay-email-conta").value = "";
       document.getElementById("vpay-nome-conta").value = "";
       document.getElementById("vpay-cpf-conta").value = "";
-      document.getElementById("vpay-pin-conta").value = "";
-      document.getElementById("vpay-senha-conta").value = "";
       
       esconderTelas();
       telaVentiladorPay.classList.remove("escondido");
@@ -846,9 +842,10 @@
     });
 
     // Processador de Validação e Débito no Banco do Ventilador Pay
-    async function processarPagamentoVentiladorPay(nomeInput, cpfInput, pinInput, senhaInput, valorPlano) {
+    async function processarPagamentoVentiladorPay(emailInput, nomeInput, cpfInput, valorPlano) {
       const cpfLimp = cpfInput.replace(/\D/g, '');
       const nomeLimp = nomeInput.trim().toLowerCase();
+      const emailLimp = emailInput.trim().toLowerCase();
 
       // Nós possíveis de cadastro no banco do Ventilador Pay
       const nodesToSearch = ['usuarios', 'contas', 'users'];
@@ -869,7 +866,7 @@
               const userNome = u.nome ? String(u.nome).trim().toLowerCase() : (u.nome_conta ? String(u.nome_conta).trim().toLowerCase() : '');
               const userEmail = u.email ? String(u.email).trim().toLowerCase() : '';
 
-              if ((cpfLimp && userCpf === cpfLimp) || (nomeLimp && (userNome === nomeLimp || userEmail === nomeLimp))) {
+              if ((emailLimp && userEmail === emailLimp) || (cpfLimp && userCpf === cpfLimp) || (nomeLimp && userNome === nomeLimp)) {
                 contaEncontrada = u;
                 nodePath = node;
                 contaKey = key;
@@ -884,19 +881,7 @@
       }
 
       if (!contaEncontrada) {
-        return { sucesso: false, erro: "Conta não encontrada no Ventilador Pay com o Nome/CPF fornecido." };
-      }
-
-      // Validação de PIN e Senha
-      const pinCadastrado = String(contaEncontrada.pin || contaEncontrada.pin_conta || '');
-      const senhaCadastrada = String(contaEncontrada.senha || contaEncontrada.password || '');
-
-      if (pinCadastrado && pinCadastrado !== pinInput.trim()) {
-        return { sucesso: false, erro: "PIN incorreto!" };
-      }
-
-      if (senhaCadastrada && senhaCadastrada !== senhaInput.trim()) {
-        return { sucesso: false, erro: "Senha incorreta!" };
+        return { sucesso: false, erro: "Conta não encontrada no Ventilador Pay com o E-mail, Nome ou CPF fornecido." };
       }
 
       // Verificação de Saldo
@@ -920,7 +905,7 @@
       // Registrar Histórico no Ventilador Pay
       try {
         await push(ref(dbVPay, 'transacoes'), {
-          usuario: contaEncontrada.nome || contaEncontrada.email || cpfInput,
+          usuario: contaEncontrada.email || contaEncontrada.nome || cpfInput,
           valor: valorPlano,
           tipo: 'compra_impulsionamento_bluered',
           data: new Date().toISOString()
@@ -936,10 +921,9 @@
     document.getElementById("form-ventilador-pay").addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      const email = document.getElementById("vpay-email-conta").value.trim();
       const nome = document.getElementById("vpay-nome-conta").value.trim();
       const cpf = document.getElementById("vpay-cpf-conta").value.trim();
-      const pin = document.getElementById("vpay-pin-conta").value.trim();
-      const senha = document.getElementById("vpay-senha-conta").value.trim();
 
       if (!grupoSelecionadoParaImpulsionar) {
         alert("Erro: Nenhum grupo/publicação selecionado.");
@@ -951,7 +935,7 @@
       telaVpayCarregando.classList.remove("escondido");
 
       try {
-        const resultado = await processarPagamentoVentiladorPay(nome, cpf, pin, senha, planoSelecionado.preco);
+        const resultado = await processarPagamentoVentiladorPay(email, nome, cpf, planoSelecionado.preco);
 
         if (!resultado.sucesso) {
           alert("Falha na Compra: " + resultado.erro);
