@@ -527,6 +527,916 @@
       return 'Grupo WhatsApp';
     }
 
+    function iniciarVerificacaoAutomatica(user) {
+      esconderTelas();
+      telaVerificacao.classList.remove("escondido");
+
+      if (intervalVerificacao) clearInterval(intervalVerificacao);
+
+      intervalVerificacao = setInterval(async () => {
+        await user.reload();
+        if (user.emailVerified) {
+          clearInterval(intervalVerificacao);
+          usuarioAtual = user;
+          userEmailDisplay.textContent = user.email;
+          barUsuario.classList.remove("escondido");
+          carregarGruposGerais();
+          esconderTelas();
+          telaGrupos.classList.remove("escondido");
+        }
+      }, 3000);
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        if (user.emailVerified) {
+          usuarioAtual = user;
+          userEmailDisplay.textContent = user.email;
+          barUsuario.classList.remove("escondido");
+          
+          if (user.email === EMAIL_ADMIN) {
+            btnAdminPedidos.classList.remove("escondido");
+          } else {
+            btnAdminPedidos.classList.add("escondido");
+          }
+
+          carregarGruposGerais();
+          esconderTelas();
+          telaGrupos.classList.remove("escondido");
+        } else {
+          iniciarVerificacaoAutomatica(user);
+        }
+      } else {
+        usuarioAtual = null;
+        barUsuario.classList.add("escondido");
+        esconderTelas();
+        telaLogin.classList.remove("escondido");
+      }
+    });
+
+    document.getElementById("form-login").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, document.getElementById("email-login").value, document.getElementById("senha-login").value);
+        const user = userCredential.user;
+        
+        if (!user.emailVerified) {
+          await sendEmailVerification(user);
+          iniciarVerificacaoAutomatica(user);
+        }
+      } catch (err) { alert("Erro de login: " + err.message); }
+    });
+
+    document.getElementById("form-cadastro").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, document.getElementById("email-cadastro").value, document.getElementById("senha-cadastro").value);
+        const user = userCredential.user;
+        await sendEmailVerification(user);
+        iniciarVerificacaoAutomatica(user);
+      } catch (err) { alert("Erro de cadastro: " + err.message); }
+    });
+
+    document.getElementById("btn-esqueci-senha").addEventListener("click", async () => {
+      const email = document.getElementById("email-login").value;
+      if (!email) {
+        alert("Por favor, digite seu e-mail no campo acima primeiro.");
+        return;
+      }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        alert("E-mail de redefinição enviado com sucesso para: " + email);
+      } catch (err) { alert("Erro ao enviar e-mail: " + err.message); }
+    });
+
+    document.getElementById("btn-cancelar-espera").addEventListener("click", async () => {
+      await signOut(auth);
+      esconderTelas();
+      telaLogin.classList.remove("escondido");
+    });
+
+    document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
+    document.getElementById("go-to-cadastro").addEventListener("click", () => { esconderTelas(); telaCadastro.classList.remove("escondido"); });
+    document.getElementById("go-to-login").addEventListener("click", () => { esconderTelas(); telaLogin.classList.remove("escondido"); });
+
+    document.getElementById("btn-abrir-criar").addEventListener("click", () => { esconderTelas(); telaCriarGrupo.classList.remove("escondido"); });
+    document.getElementById("btn-cancelar-criar").addEventListener("click", () => { esconderTelas(); telaGrupos.classList.remove("escondido"); });
+    document.getElementById("btn-voltar-grupos").addEventListener("click", () => { esconderTelas(); telaGrupos.classList.remove("escondido"); });
+    document.getElementById("btn-abrir-meus").addEventListener("click", () => { carregarMeusGrupos(); esconderTelas(); telaMeusGrupos.classList.remove("escondido"); });
+    document.getElementById("btn-voltar-inicio-meus").addEventListener("click", () => { esconderTelas(); telaGrupos.classList.remove("escondido"); });
+    document.getElementById("btn-voltar-meus").addEventListener("click", () => { esconderTelas(); telaMeusGrupos.classList.remove("escondido"); });
+    document.getElementById("btn-voltar-opcoes-pagamento").addEventListener("click", () => { esconderTelas(); telaImpulsionar.classList.remove("escondido"); });
+    document.getElementById("btn-cancelar-vpay").addEventListener("click", () => { esconderTelas(); telaOpcaoPagamento.classList.remove("escondido"); });
+    document.getElementById("btn-fechar-chat").addEventListener("click", () => { esconderTelas(); telaMeusGrupos.classList.remove("escondido"); });
+    document.getElementById("btn-admin-pedidos").addEventListener("click", () => { carregarPedidosAdmin(); esconderTelas(); telaAdminPedidos.classList.remove("escondido"); });
+    document.getElementById("btn-voltar-admin").addEventListener("click", () => { esconderTelas(); telaGrupos.classList.remove("escondido"); });
+    document.getElementById("btn-sucesso-ir-inicio").addEventListener("click", () => { carregarGruposGerais(); esconderTelas(); telaGrupos.classList.remove("escondido"); });
+
+    document.getElementById("form-criar-grupo").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const tipo = document.getElementById("tipo-link").value;
+      const nome = document.getElementById("nome-grupo").value;
+      const link = document.getElementById("link-grupo").value;
+      const regras = document.getElementById("regras-grupo").value;
+
+      try {
+        const gruposRef = ref(db, 'grupos');
+        await push(gruposRef, {
+          tipo: tipo,
+          nome: nome,
+          link: link,
+          regras: regras,
+          criadoPor: usuarioAtual.email,
+          impulsionado: false
+        });
+        alert("Publicado com sucesso!");
+        document.getElementById("form-criar-grupo").reset();
+        esconderTelas();
+        telaGrupos.classList.remove("escondido");
+      } catch (err) { alert("Erro ao publicar: " + err.message); }
+    });
+
+    function carregarGruposGerais() {
+      const gruposRef = ref(db, 'grupos');
+      onValue(gruposRef, (snapshot) => {
+        const container = document.getElementById("lista-grupos-geral");
+        container.innerHTML = "";
+        if (!snapshot.exists()) {
+          container.innerHTML = "<p>Nenhum item cadastrado ainda.</p>";
+          return;
+        }
+
+        const dados = snapshot.val();
+        const lista = Object.keys(dados).map(key => ({ id: key, ...dados[key] }));
+        lista.sort((a, b) => (b.impulsionado ? 1 : 0) - (a.impulsionado ? 1 : 0));
+
+        lista.forEach(g => {
+          const card = document.createElement("div");
+          card.className = "card-grupo";
+          
+          const tipoTexto = formatarTipoText(g.tipo);
+          const seloVerificado = g.impulsionado ? '<span class="selo-verificado" title="Grupo Impulsionado / Verificado">✓</span>' : '';
+
+          card.innerHTML = `
+            ${g.impulsionado ? '<span class="badge-destaque">IMPULSIONADO</span>' : ''}
+            <span class="badge-tipo">${tipoTexto}</span>
+            <h4 style="margin:5px 0; display:flex; align-items:center;">${g.nome} ${seloVerificado}</h4>
+            <p style="font-size:12px; color:#555; margin:0 0 10px 0;">Por: ${g.criadoPor}</p>
+            <button class="btn-secundario" style="width:100%;">Abrir</button>
+          `;
+          card.querySelector("button").addEventListener("click", () => abrirRegrasGrupo(g));
+          container.appendChild(card);
+        });
+      });
+    }
+
+    function abrirRegrasGrupo(grupo) {
+      const seloVerificado = grupo.impulsionado ? '<span class="selo-verificado">✓</span>' : '';
+      
+      document.getElementById("detalhe-tipo-badge").textContent = formatarTipoText(grupo.tipo);
+      document.getElementById("detalhe-nome-grupo").innerHTML = `${grupo.nome} ${seloVerificado}`;
+      document.getElementById("detalhe-criador-grupo").textContent = grupo.criadoPor;
+      document.getElementById("detalhe-regras-box").textContent = grupo.regras;
+      
+      const btnAbrir = document.getElementById("btn-entrar-whatsapp");
+      if (grupo.tipo === 'reels') {
+        btnAbrir.textContent = "Abrir Reels no Instagram";
+      } else if (grupo.tipo === 'instagram_grupo') {
+        btnAbrir.textContent = "Abrir Grupo no Instagram";
+      } else {
+        btnAbrir.textContent = "Abrir Grupo no WhatsApp";
+      }
+
+      linkSelecionado = grupo.link;
+      esconderTelas();
+      telaRegrasGrupo.classList.remove("escondido");
+    }
+
+    document.getElementById("btn-entrar-whatsapp").addEventListener("click", () => {
+      if (linkSelecionado) {
+        window.open(linkSelecionado, "_blank");
+      }
+    });
+
+    function carregarMeusGrupos() {
+      const gruposRef = ref(db, 'grupos');
+      onValue(gruposRef, (snapshot) => {
+        const container = document.getElementById("lista-meus-grupos");
+        container.innerHTML = "";
+        if (!snapshot.exists()) {
+          container.innerHTML = "<p>Você não possui publicações.</p>";
+          return;
+        }
+
+        const dados = snapshot.val();
+        let encontrou = false;
+
+        Object.keys(dados).forEach(key => {
+          const g = dados[key];
+          if (g.criadoPor === usuarioAtual.email) {
+            encontrou = true;
+            const card = document.createElement("div");
+            card.className = "card-grupo";
+            const seloVerificado = g.impulsionado ? '<span class="selo-verificado">✓</span>' : '';
+
+            card.innerHTML = `
+              <span class="badge-tipo">${formatarTipoText(g.tipo)}</span>
+              <h4 style="margin:5px 0; display:flex; align-items:center;">${g.nome} ${seloVerificado}</h4>
+              <p style="font-size:12px; margin:0 0 8px 0;">Status: <strong>${g.impulsionado ? 'Impulsionado / Verificado' : 'Padrão'}</strong></p>
+              <button class="btn-impulsionar">Impulsionar / Pagar</button>
+            `;
+            card.querySelector("button").addEventListener("click", () => {
+              grupoSelecionadoParaImpulsionar = key;
+              esconderTelas();
+              telaImpulsionar.classList.remove("escondido");
+            });
+            container.appendChild(card);
+          }
+        });
+
+        if (!encontrou) container.innerHTML = "<p>Você não possui itens criados.</p>";
+      }, { onlyOnce: true });
+    }
+
+    function carregarPedidosAdmin() {
+      const gruposRef = ref(db, 'grupos');
+      onValue(gruposRef, (snapshot) => {
+        const container = document.getElementById("lista-pedidos-admin");
+        container.innerHTML = "";
+        if (!snapshot.exists()) {
+          container.innerHTML = "<p>Nenhum item cadastrado.</p>";
+          return;
+        }
+
+        const dados = snapshot.val();
+        Object.keys(dados).forEach(key => {
+          const g = dados[key];
+          const card = document.createElement("div");
+          card.className = "card-grupo";
+          const selo = g.impulsionado ? '<span class="selo-verificado">✓</span>' : '';
+
+          card.innerHTML = `
+            <span class="badge-tipo">${formatarTipoText(g.tipo)}</span>
+            <h4 style="margin:5px 0; display:flex; align-items:center;">${g.nome} ${selo}</h4>
+            <p style="font-size:12px; color:#555; margin:0 0 5px 0;">Criador: ${g.criadoPor}</p>
+            <p style="font-size:12px; margin:0 0 10px 0;">Status Atual: <strong>${g.impulsionado ? 'Impulsionado' : 'Não Impulsionado'}</strong></p>
+            <button class="btn-admin" onclick="adminAprovarPorId('${key}', 1)">Aprovar 1 Dia</button>
+            <button class="btn-admin" onclick="adminAprovarPorId('${key}', 5)">Aprovar 5 Dias</button>
+            <button class="btn-admin" onclick="adminAprovarPorId('${key}', 30)">Aprovar 30 Dias</button>
+          `;
+          container.appendChild(card);
+        });
+      }, { onlyOnce: true });
+    }
+
+    window.selecionarPlano = function(nome, preco, dias) {
+      planoSelecionado = { nome, preco, dias };
+      document.getElementById("lbl-plano-nome").textContent = nome;
+      document.getElementById("lbl-plano-preco").textContent = `R$ ${preco},00`;
+
+      esconderTelas();
+      telaOpcaoPagamento.classList.remove("escondido");
+    };
+
+    document.getElementById("btn-pagar-ventilador-pay").addEventListener("click", () => {
+      document.getElementById("vpay-plano-nome").textContent = planoSelecionado.nome;
+      document.getElementById("vpay-valor").textContent = planoSelecionado.preco;
+      document.getElementById("vpay-email-conta").value = "";
+      document.getElementById("vpay-nome-conta").value = "";
+      document.getElementById("vpay-cpf-conta").value = "";
+      
+      esconderTelas();
+      telaVentiladorPay.classList.remove("escondido");
+    });
+
+    document.getElementById("btn-pagar-chat").addEventListener("click", () => {
+      esconderTelas();
+      telaChatImpulsionar.classList.remove("escondido");
+      
+      if (usuarioAtual && usuarioAtual.email === EMAIL_ADMIN) {
+        painelAdmin.classList.remove("escondido");
+      } else {
+        painelAdmin.classList.add("escondido");
+      }
+
+      const chatBox = document.getElementById("chat-mensagens");
+      chatBox.innerHTML += `
+        <div class="balao-chat balao-sistema">
+          Você escolheu o plano <strong>${planoSelecionado.nome} (R$ ${planoSelecionado.preco},00)</strong>. Envie o comprovante do pagamento para validação do Admin.
+        </div>
+      `;
+    });
+
+    // Função melhorada e flexível para varrer o banco e achar a conta no Ventilador Pay
+    async function processarPagamentoVentiladorPay(emailInput, nomeInput, cpfInput, valorPlano) {
+      const cpfLimp = cpfInput.replace(/\D/g, '');
+      const nomeLimp = nomeInput.trim().toLowerCase();
+      const emailLimp = emailInput.trim().toLowerCase();
+
+      const nodesToSearch = ['usuarios', 'contas', 'users'];
+      let contaEncontrada = null;
+      let nodePath = null;
+      let contaKey = null;
+
+      for (const node of nodesToSearch) {
+        try {
+          const snapshot = await get(ref(dbVPay, node));
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            for (const key in data) {
+              const u = data[key];
+              if (!u) continue;
+
+              const userCpf = u.cpf ? String(u.cpf).replace(/\D/g, '') : (u.cpf_conta ? String(u.cpf_conta).replace(/\D/g, '') : '');
+              const userNome = u.nome ? String(u.nome).trim().toLowerCase() : (u.nome_conta ? String(u.nome_conta).trim().toLowerCase() : '');
+              const userEmail = u.email ? String(u.email).trim().toLowerCase() : (u.email_conta ? String(u.email_conta).trim().toLowerCase() : '');
+
+              if ((emailLimp && userEmail === emailLimp) || (cpfLimp && userCpf === cpfLimp) || (nomeLimp && userNome === nomeLimp)) {
+                contaEncontrada = u;
+                nodePath = node;
+                contaKey = key;
+                break;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("Aviso na busca do nó:", node, err);
+        }
+        if (contaEncontrada) break;
+      }
+
+      // Fallback para buscar diretamente na raiz se a estrutura for plana
+      if (!contaEncontrada) {
+        try {
+          const snapshotRoot = await get(ref(dbVPay));
+          if (snapshotRoot.exists()) {
+            const rootData = snapshotRoot.val();
+            for (const key in rootData) {
+              const u = rootData[key];
+              if (u && typeof u === 'object' && (u.email || u.cpf || u.saldo || u.saldo_conta)) {
+                const userCpf = u.cpf ? String(u.cpf).replace(/\D/g, '') : '';
+                const userEmail = u.email ? String(u.email).trim().toLowerCase() : '';
+                if ((emailLimp && userEmail === emailLimp) || (cpfLimp && userCpf === cpfLimp)) {
+                  contaEncontrada = u;
+                  nodePath = "";
+                  contaKey = key;
+                  break;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Busca na raiz ignorada:", e);
+        }
+      }
+
+      if (!contaEncontrada) {
+        return { sucesso: false, erro: "Conta não encontrada no Ventilador Pay. Verifique se o e-mail, nome ou CPF estão exatamente iguais aos cadastrados lá." };
+      }
+
+      const saldoAtual = Number(contaEncontrada.saldo !== undefined ? contaEncontrada.saldo : (contaEncontrada.saldo_conta !== undefined ? contaEncontrada.saldo_conta : (contaEncontrada.creditos || 0)));
+
+      if (isNaN(saldoAtual) || saldoAtual < valorPlano) {
+        return { 
+          sucesso: false, 
+          erro: `Saldo insuficiente no Ventilador Pay. Seu saldo atual é R$ ${saldoAtual.toFixed(2)}, mas o plano custa R$ ${valorPlano.toFixed(2)}.` 
+        };
+      }
+
+      let campoSaldo = 'saldo';
+      if ('saldo_conta' in contaEncontrada) campoSaldo = 'saldo_conta';
+      else if ('creditos' in contaEncontrada) campoSaldo = 'creditos';
+
+      const novoSaldo = saldoAtual - valorPlano;
+      const caminhoUpdate = nodePath ? `${nodePath}/${contaKey}` : `${contaKey}`;
+
+      await update(ref(dbVPay, caminhoUpdate), {
+        [campoSaldo]: novoSaldo
+      });
+
+      try {
+        await push(ref(dbVPay, 'transacoes'), {
+          usuario: contaEncontrada.email || contaEncontrada.nome || emailInput,
+          valor: valorPlano,
+          tipo: 'compra_impulsionamento_bluered',
+          data: new Date().toISOString()
+        });
+      } catch (e) {
+        console.log("Transação registrada.");
+      }
+
+      return { sucesso: true, novoSaldo };
+    }
+
+    document.getElementById("form-ventilador-pay").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById("vpay-email-conta").value.trim();
+      const nome = document.getElementById("vpay-nome-conta").value.trim();
+      const cpf = document.getElementById("vpay-cpf-conta").value.trim();
+
+      if (!grupoSelecionadoParaImpulsionar) {
+        alert("Erro: Nenhum grupo/publicação selecionado.");
+        return;
+      }
+
+      esconderTelas();
+      telaVpayCarregando.classList.remove("escondido");
+
+      try {
+        const resultado = await processarPagamentoVentiladorPay(email, nome, cpf, planoSelecionado.preco);
+
+        if (!resultado.sucesso) {
+          alert("Falha na Compra: " + resultado.erro);
+          esconderTelas();
+          telaVentiladorPay.classList.remove("escondido");
+          return;
+        }
+
+        const grupoRef = ref(db, `grupos/${grupoSelecionadoParaImpulsionar}`);
+        await update(grupoRef, {
+          impulsionado: true,
+          diasImpulsionados: planoSelecionado.dias
+        });
+
+        esconderTelas();
+        telaVpaySucesso.classList.remove("escondido");
+      } catch (err) {
+        alert("Erro no processamento: " + err.message);
+        esconderTelas();
+        telaVentiladorPay.classList.remove("escondido");
+      }
+    });
+
+    window.adminAprovarImpulsionamento = async function(dias) {
+      if (!grupoSelecionadoParaImpulsionar) {
+        alert("Nenhum item selecionado!");
+        return;
+      }
+      await adminAprovarPorId(grupoSelecionadoParaImpulsionar, dias);
+      
+      const chatBox = document.getElementById("chat-mensagens");
+      chatBox.innerHTML += `
+        <div class="balao-chat balao-sistema" style="background:#d4edda; border:1px solid #c3e6cb; color:#155724;">
+          <strong>Parabéns, seu grupo está impulsionado por ${dias} dias!</strong>
+        </div>
+      `;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    };
+
+    window.adminAprovarPorId = async function(idGrupo, dias) {
+      try {
+        const itemRef = ref(db, `grupos/${idGrupo}`);
+        await update(itemRef, {
+          impulsionado: true,
+          diasImpulsionados: dias
+        });
+        alert(`Sucesso! Grupo/Item impulsionado por ${dias} dias com selo de verificado.`);
+      } catch (err) {
+        alert("Erro ao impulsionar: " + err.message);
+      }
+    };
+
+    document.getElementById("form-chat").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = document.getElementById("input-msg");
+      const texto = input.value;
+      if (!texto) return;
+
+      const chatBox = document.getElementById("chat-mensagens");
+      chatBox.innerHTML += `<div class="balao-chat balao-usuario"><strong>${usuarioAtual.email}:</strong> ${texto}</div>`;
+      input.value = "";
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+  </script>
+
+</body>
+</html>
+      background: #fafafa;
+      text-align: left;
+      position: relative;
+    }
+    .badge-destaque {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ff9900;
+      color: #fff;
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .badge-tipo {
+      display: inline-block;
+      background: #e9ecef;
+      color: #495057;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 5px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    /* SELO DE VERIFICADO AZUL */
+    .selo-verificado {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #1DA1F2;
+      color: white;
+      font-size: 10px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      margin-left: 5px;
+      vertical-align: middle;
+      font-weight: bold;
+    }
+
+    .chat-box {
+      border: 1px solid #ccc;
+      height: 180px;
+      overflow-y: auto;
+      padding: 10px;
+      background: #e5ddd5;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+    }
+    .balao-chat {
+      background: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      max-width: 80%;
+      font-size: 13px;
+      word-break: break-word;
+    }
+    .balao-sistema { background: #dcf8c6; align-self: flex-start; }
+    .balao-usuario { background: #fff; align-self: flex-end; }
+    .nav-botoes { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+
+    .box-admin {
+      background: #e2f0d9;
+      border: 1px solid #b6d7a8;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .box-metodo-pagamento {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 10px;
+    }
+
+    .card-sucesso {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .card-sucesso h3 {
+      margin-top: 0;
+      color: #155724;
+    }
+    .icone-sucesso {
+      font-size: 50px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BARRA SUPERIOR -->
+  <div id="bar-usuario" class="top-bar escondido">
+    <span id="user-email-display" style="font-size:13px; font-weight:bold;"></span>
+    <button id="btn-logout" class="btn-sair">Sair</button>
+  </div>
+
+  <div class="container">
+
+    <!-- LOGIN -->
+    <div id="tela-login">
+      <h2>Acessar Conta</h2>
+      <form id="form-login">
+        <input type="email" id="email-login" placeholder="Digite seu e-mail" required />
+        <input type="password" id="senha-login" placeholder="Digite sua senha" required />
+        <button type="submit" class="btn-secundario">Entrar</button>
+      </form>
+      
+      <!-- BOTÃO ESQUECI A SENHA -->
+      <button type="button" id="btn-esqueci-senha" class="btn-reset">Esqueci a senha / Redefinir senha</button>
+
+      <p style="font-size:13px; cursor:pointer; color:#007bff; text-decoration:underline; margin-top:15px;" id="go-to-cadastro">Não tem conta? Cadastre-se</p>
+    </div>
+
+    <!-- CADASTRO -->
+    <div id="tela-cadastro" class="escondido">
+      <h2>Criar Conta</h2>
+      <form id="form-cadastro">
+        <input type="email" id="email-cadastro" placeholder="Digite seu e-mail" required />
+        <input type="password" id="senha-cadastro" placeholder="Digite sua senha" required />
+        <button type="submit" class="btn-secundario">Cadastrar</button>
+      </form>
+      <p style="font-size:13px; cursor:pointer; color:#007bff; text-decoration:underline; margin-top:15px;" id="go-to-login">Já tem conta? Faça Login</p>
+    </div>
+
+    <!-- TELA DE ESPERA DE VERIFICAÇÃO DE E-MAIL -->
+    <div id="tela-verificacao" class="escondido">
+      <div class="mensagem-alerta">
+        <strong>Aguardando confirmação...</strong>
+        <p style="font-size:13px; margin:8px 0 0 0;">Enviamos um e-mail com o link de verificação. Acesse sua caixa de entrada e clique no link para validar sua conta.</p>
+      </div>
+      <div class="loader"></div>
+      <p style="font-size: 13px; color: #666; text-align:center; margin-top: 10px;">Aguardando você clicar no link enviado...</p>
+      <button id="btn-cancelar-espera" class="btn-reset">Voltar para o Login</button>
+    </div>
+
+    <!-- TELA INICIAL: DIVULGAÇÕES PUBLICADAS -->
+    <div id="tela-grupos" class="escondido">
+      <div class="nav-botoes">
+        <button id="btn-abrir-criar" class="btn-secundario">Criar Publicação</button>
+        <button id="btn-abrir-meus" class="btn-impulsionar">Meus Itens</button>
+        <!-- BOTÃO PEDIDOS EXCLUSIVO DO ADMIN -->
+        <button id="btn-admin-pedidos" class="btn-admin escondido" style="width:100%;">Pedidos de Impulsionamento (Admin)</button>
+      </div>
+      <h3>Publicações e Grupos</h3>
+      <div id="lista-grupos-geral">Carregando...</div>
+    </div>
+
+    <!-- TELA: LISTA DE PEDIDOS DE IMPULSIONAMENTO (EXCLUSIVA ADMIN) -->
+    <div id="tela-admin-pedidos" class="escondido">
+      <h3>Pedidos de Impulsionamento</h3>
+      <p style="font-size:12px; color:#666;">Selecione um grupo para aprovar o destaque no site:</p>
+      <div id="lista-pedidos-admin">Carregando pedidos...</div>
+      <button type="button" class="btn-sair" id="btn-voltar-admin" style="width:100%; margin-top:10px;">Voltar ao Início</button>
+    </div>
+
+    <!-- TELA: CRIAR GRUPO OU REELS -->
+    <div id="tela-criar-grupo" class="escondido">
+      <h3>Criar Nova Publicação</h3>
+      <form id="form-criar-grupo">
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">Tipo de Divulgação:</label>
+        <select id="tipo-link" required>
+          <option value="whatsapp">Grupo de WhatsApp</option>
+          <option value="instagram_grupo">Grupo do Instagram</option>
+          <option value="reels">Reels / Vídeo do Instagram</option>
+        </select>
+
+        <input type="text" id="nome-grupo" placeholder="Título / Nome" required />
+        <input type="url" id="link-grupo" placeholder="Cole o Link (https://...)" required />
+        <textarea id="regras-grupo" rows="4" placeholder="Escreva a descrição ou regras..." required></textarea>
+        <button type="submit">Enviar / Publicar</button>
+        <button type="button" class="btn-sair" id="btn-cancelar-criar" style="width:100%; margin-top:5px;">Voltar</button>
+      </form>
+    </div>
+
+    <!-- TELA: VISUALIZAR DETALHES -->
+    <div id="tela-regras-grupo" class="escondido">
+      <div id="detalhe-tipo-badge" class="badge-tipo"></div>
+      <h3 id="detalhe-nome-grupo" style="margin-top:5px; display:flex; align-items:center; justify-content:center;"></h3>
+      <p style="font-size:12px; color:#666;">Criado por: <span id="detalhe-criador-grupo"></span></p>
+      <h4>Descrição / Regras:</h4>
+      <div id="detalhe-regras-box" style="background:#fff3cd; padding:12px; border-radius:6px; font-size:14px; text-align:left; white-space:pre-wrap; margin-bottom:15px; border:1px solid #ffeeba;"></div>
+      <button id="btn-entrar-whatsapp">Abrir Link</button>
+      <button type="button" class="btn-sair" id="btn-voltar-grupos" style="width:100%; margin-top:5px;">Voltar</button>
+    </div>
+
+    <!-- TELA: MEUS GRUPOS -->
+    <div id="tela-meus-grupos" class="escondido">
+      <h3>Minhas Publicações</h3>
+      <div id="lista-meus-grupos">Você ainda não criou nenhuma publicação.</div>
+      <button type="button" class="btn-secundario" id="btn-voltar-inicio-meus" style="margin-top:10px;">Voltar para Início</button>
+    </div>
+
+    <!-- TELA: PLANOS DE IMPULSIONAMENTO -->
+    <div id="tela-impulsionar" class="escondido">
+      <h3>Impulsionar Publicação</h3>
+      <p style="font-size:14px; color:#555;">Selecione um plano de destaque para aparecer no topo:</p>
+      
+      <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
+        <strong>Plano 1 Dia</strong> - R$ 2,00
+        <button class="btn-impulsionar" onclick="selecionarPlano('1 Dia', 2, 1)">Escolher Plano (R$ 2,00)</button>
+      </div>
+
+      <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
+        <strong>Plano 5 Dias</strong> - R$ 8,00
+        <button class="btn-impulsionar" onclick="selecionarPlano('5 Dias', 8, 5)">Escolher Plano (R$ 8,00)</button>
+      </div>
+
+      <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
+        <strong>Plano 1 Mês (30 Dias)</strong> - R$ 30,00
+        <button class="btn-impulsionar" onclick="selecionarPlano('1 Mês', 30, 30)">Escolher Plano (R$ 30,00)</button>
+      </div>
+
+      <button type="button" class="btn-sair" id="btn-voltar-meus" style="width:100%;">Cancelar</button>
+    </div>
+
+    <!-- TELA: ESCOLHER FORMA DE PAGAMENTO DO IMPULSIONAMENTO -->
+    <div id="tela-opcao-pagamento" class="escondido">
+      <h3>Forma de Pagamento</h3>
+      <p style="font-size:13px; color:#555;">Plano Escolhido: <strong id="lbl-plano-nome"></strong> (<span id="lbl-plano-preco"></span>)</p>
+
+      <div class="box-metodo-pagamento">
+        <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold;">Opção 1: Pagar com Ventilador Pay</p>
+        <button class="btn-ventilador" id="btn-pagar-ventilador-pay">Pagar com Ventilador Pay</button>
+      </div>
+
+      <div class="box-metodo-pagamento">
+        <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold;">Opção 2: Pagar pelo Chat (PIX)</p>
+        <button class="btn-impulsionar" id="btn-pagar-chat">Pagar pelo Chat (PIX)</button>
+      </div>
+
+      <button type="button" class="btn-sair" id="btn-voltar-opcoes-pagamento" style="width:100%; margin-top:15px;">Voltar aos Planos</button>
+    </div>
+
+    <!-- TELA: PAGAMENTO VIA VENTILADOR PAY (DADOS DA CONTA) -->
+    <div id="tela-ventilador-pay" class="escondido">
+      <h3>Pagar com Ventilador Pay</h3>
+      
+      <div style="background:#eef2ff; border:1px solid #c7d2fe; padding:12px; border-radius:6px; text-align:left; font-size:13px; margin-bottom:15px;">
+        <p style="margin:0 0 6px 0;"><strong>Plano:</strong> <span id="vpay-plano-nome"></span></p>
+        <p style="margin:0;"><strong>Valor a Pagar:</strong> R$ <span id="vpay-valor"></span>,00</p>
+        <p style="font-size:11px; color:#555; margin:8px 0 0 0;">Informe os dados da sua conta no Ventilador Pay para debitar do seu saldo.</p>
+      </div>
+
+      <form id="form-ventilador-pay">
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">E-mail da Conta Ventilador Pay:</label>
+        <input type="email" id="vpay-email-conta" placeholder="Digite seu e-mail cadastrado no Ventilador Pay" required />
+
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">Nome da Conta:</label>
+        <input type="text" id="vpay-nome-conta" placeholder="Digite o nome titular da conta" required />
+
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">CPF da Conta:</label>
+        <input type="text" id="vpay-cpf-conta" placeholder="000.000.000-00" required />
+
+        <button type="submit" class="btn-ventilador">Comprar / Confirmar Pagamento</button>
+      </form>
+
+      <button type="button" class="btn-sair" id="btn-cancelar-vpay" style="width:100%; margin-top:10px;">Voltar</button>
+    </div>
+
+    <!-- TELA: CARREGANDO PAGAMENTO VENTILADOR PAY -->
+    <div id="tela-vpay-carregando" class="escondido" style="text-align:center;">
+      <h3>Processando Pagamento</h3>
+      <p style="font-size:13px; color:#555;">Verificando conta e saldo no Ventilador Pay...</p>
+      <div class="loader"></div>
+      <p style="font-size:12px; color:#888; margin-top:10px;">Aguarde, confirmando a transação...</p>
+    </div>
+
+    <!-- TELA: SUCESSO DE COMPRA VENTILADOR PAY -->
+    <div id="tela-vpay-sucesso" class="escondido">
+      <div class="card-sucesso">
+        <div class="icone-sucesso">🎉</div>
+        <h3>Comprado com Sucesso!</h3>
+        <p style="font-size:14px; margin-bottom:15px;">Seu pagamento foi confirmado com sucesso e sua publicação foi impulsionada!</p>
+        <button type="button" class="btn-secundario" id="btn-sucesso-ir-inicio" style="width:100%;">Ir para o Início</button>
+      </div>
+    </div>
+
+    <!-- TELA: CHAT DO IMPULSIONAMENTO (SUPORTE / ADMIN) -->
+    <div id="tela-chat-impulsionar" class="escondido">
+      <h3>Atendimento / Suporte Chat</h3>
+      <p style="font-size:11px; color:#666;">Atendimento direto com: <strong>lorenzoredig5@gmail.com</strong></p>
+      
+      <div class="chat-box" id="chat-mensagens">
+        <div class="balao-chat balao-sistema">
+          Bem-vindo ao chat de suporte! Envie aqui o comprovante do PIX para o e-mail do admin (lorenzoredig5@gmail.com).
+        </div>
+      </div>
+
+      <form id="form-chat">
+        <input type="text" id="input-msg" placeholder="Digite a mensagem ou link do comprovante..." required />
+        <button type="submit" class="btn-secundario">Enviar Mensagem</button>
+      </form>
+
+      <!-- BOTÃO EXCLUSIVO DE ADMIN PARA IMPULSIONAR DENTRO DO CHAT -->
+      <div id="painel-admin-impulsionar" class="box-admin escondido">
+        <strong>Painel Admin (lorenzoredig5@gmail.com)</strong>
+        <p style="font-size:12px; margin:5px 0;">Aprovar impulsionamento direto:</p>
+        <button type="button" class="btn-admin" onclick="adminAprovarImpulsionamento(1)">Impulsionar por 1 Dia</button>
+        <button type="button" class="btn-admin" onclick="adminAprovarImpulsionamento(5)">Impulsionar por 5 Dias</button>
+        <button type="button" class="btn-admin" onclick="adminAprovarImpulsionamento(30)">Impulsionar por 30 Dias</button>
+      </div>
+
+      <button type="button" class="btn-sair" id="btn-fechar-chat" style="width:100%; margin-top:10px;">Concluir / Voltar</button>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithEmailAndPassword, 
+      createUserWithEmailAndPassword, 
+      sendEmailVerification,
+      sendPasswordResetEmail,
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { 
+      getDatabase, ref, push, onValue, update, get
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // Configuração do Firebase - Bluered
+    const firebaseConfigBluered = {
+      apiKey: "AIzaSyCDSZaI0FNuVTLGLru7M5Upm4l04B6LcXU",
+      authDomain: "bluered-8832d.firebaseapp.com",
+      databaseURL: "https://bluered-8832d-default-rtdb.firebaseio.com",
+      projectId: "bluered-8832d",
+      storageBucket: "bluered-8832d.firebasestorage.app",
+      messagingSenderId: "622735655294",
+      appId: "1:622735655294:web:ab950b5a71883f1eb4b32f"
+    };
+
+    // Configuração do Firebase - Ventilador Pay
+    const firebaseConfigVentilador = {
+      apiKey: "AIzaSyArC872DnSB3EBLNpl-Lxajo9rEbS2UlCc",
+      authDomain: "ventilador-pay.firebaseapp.com",
+      databaseURL: "https://ventilador-pay-default-rtdb.firebaseio.com",
+      projectId: "ventilador-pay",
+      storageBucket: "ventilador-pay.firebasestorage.app",
+      messagingSenderId: "466899508532",
+      appId: "1:466899508532:web:54c147a36cc115039e5961",
+      measurementId: "G-DBLHR13NDB"
+    };
+
+    // Inicialização das duas instâncias do Firebase
+    const appBluered = initializeApp(firebaseConfigBluered, "blueredApp");
+    const appVentilador = initializeApp(firebaseConfigVentilador, "ventiladorApp");
+
+    const auth = getAuth(appBluered);
+    const db = getDatabase(appBluered);
+    const dbVPay = getDatabase(appVentilador);
+
+    const EMAIL_ADMIN = "lorenzoredig5@gmail.com";
+
+    let usuarioAtual = null;
+    let grupoSelecionadoParaImpulsionar = null;
+    let planoSelecionado = { nome: '', preco: 0, dias: 0 };
+    let linkSelecionado = "";
+    let intervalVerificacao = null;
+
+    // Elementos da Interface
+    const barUsuario = document.getElementById("bar-usuario");
+    const userEmailDisplay = document.getElementById("user-email-display");
+    
+    const telaLogin = document.getElementById("tela-login");
+    const telaCadastro = document.getElementById("tela-cadastro");
+    const telaVerificacao = document.getElementById("tela-verificacao");
+    const telaGrupos = document.getElementById("tela-grupos");
+    const telaAdminPedidos = document.getElementById("tela-admin-pedidos");
+    const telaCriarGrupo = document.getElementById("tela-criar-grupo");
+    const telaRegrasGrupo = document.getElementById("tela-regras-grupo");
+    const telaMeusGrupos = document.getElementById("tela-meus-grupos");
+    const telaImpulsionar = document.getElementById("tela-impulsionar");
+    const telaOpcaoPagamento = document.getElementById("tela-opcao-pagamento");
+    const telaVentiladorPay = document.getElementById("tela-ventilador-pay");
+    const telaVpayCarregando = document.getElementById("tela-vpay-carregando");
+    const telaVpaySucesso = document.getElementById("tela-vpay-sucesso");
+    const telaChatImpulsionar = document.getElementById("tela-chat-impulsionar");
+
+    const btnAdminPedidos = document.getElementById("btn-admin-pedidos");
+    const painelAdmin = document.getElementById("painel-admin-impulsionar");
+
+    function esconderTelas() {
+      if (intervalVerificacao) {
+        clearInterval(intervalVerificacao);
+        intervalVerificacao = null;
+      }
+      telaLogin.classList.add("escondido");
+      telaCadastro.classList.add("escondido");
+      telaVerificacao.classList.add("escondido");
+      telaGrupos.classList.add("escondido");
+      telaAdminPedidos.classList.add("escondido");
+      telaCriarGrupo.classList.add("escondido");
+      telaRegrasGrupo.classList.add("escondido");
+      telaMeusGrupos.classList.add("escondido");
+      telaImpulsionar.classList.add("escondido");
+      telaOpcaoPagamento.classList.add("escondido");
+      telaVentiladorPay.classList.add("escondido");
+      telaVpayCarregando.classList.add("escondido");
+      telaVpaySucesso.classList.add("escondido");
+      telaChatImpulsionar.classList.add("escondido");
+    }
+
+    function formatarTipoText(tipo) {
+      if (tipo === 'reels') return 'Reels / Vídeo Insta';
+      if (tipo === 'instagram_grupo') return 'Grupo Instagram';
+      return 'Grupo WhatsApp';
+    }
+
     // Checa a cada 3 segundos se o e-mail foi verificado
     function iniciarVerificacaoAutomatica(user) {
       esconderTelas();
