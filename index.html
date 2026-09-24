@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>bluered - Plataforma de Divulgação</title>
   
-  <!-- Meta tag de verificação do Google Search Console -->
   <meta name="google-site-verification" content="jXq7sGlAE0hbBC_lLV92L7sCZ16heHD5fuJ-9N6G5zE" />
   <meta name="description" content="GT Hook: Encontre, divulgue e impulsione grupos de WhatsApp, grupos e Reels do Instagram." />
 
@@ -129,8 +128,6 @@
       font-weight: bold;
       text-transform: uppercase;
     }
-
-    /* SELO DE VERIFICADO AZUL */
     .selo-verificado {
       display: inline-flex;
       align-items: center;
@@ -145,7 +142,6 @@
       vertical-align: middle;
       font-weight: bold;
     }
-
     .chat-box {
       border: 1px solid #ccc;
       height: 180px;
@@ -169,7 +165,6 @@
     .balao-sistema { background: #dcf8c6; align-self: flex-start; }
     .balao-usuario { background: #fff; align-self: flex-end; }
     .nav-botoes { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
-
     .box-admin {
       background: #e2f0d9;
       border: 1px solid #b6d7a8;
@@ -178,7 +173,6 @@
       margin-top: 10px;
       text-align: center;
     }
-
     .box-metodo-pagamento {
       background: #f8f9fa;
       border: 1px solid #dee2e6;
@@ -186,7 +180,6 @@
       padding: 15px;
       margin-top: 10px;
     }
-
     .card-sucesso {
       background: #d4edda;
       color: #155724;
@@ -223,10 +216,7 @@
         <input type="password" id="senha-login" placeholder="Digite sua senha" required />
         <button type="submit" class="btn-secundario">Entrar</button>
       </form>
-      
-      <!-- BOTÃO ESQUECI A SENHA -->
       <button type="button" id="btn-esqueci-senha" class="btn-reset">Esqueci a senha / Redefinir senha</button>
-
       <p style="font-size:13px; cursor:pointer; color:#007bff; text-decoration:underline; margin-top:15px;" id="go-to-cadastro">Não tem conta? Cadastre-se</p>
     </div>
 
@@ -257,7 +247,6 @@
       <div class="nav-botoes">
         <button id="btn-abrir-criar" class="btn-secundario">Criar Publicação</button>
         <button id="btn-abrir-meus" class="btn-impulsionar">Meus Itens</button>
-        <!-- BOTÃO PEDIDOS EXCLUSIVO DO ADMIN -->
         <button id="btn-admin-pedidos" class="btn-admin escondido" style="width:100%;">Pedidos de Impulsionamento (Admin)</button>
       </div>
       <h3>Publicações e Grupos</h3>
@@ -282,7 +271,6 @@
           <option value="instagram_grupo">Grupo do Instagram</option>
           <option value="reels">Reels / Vídeo do Instagram</option>
         </select>
-
         <input type="text" id="nome-grupo" placeholder="Título / Nome" required />
         <input type="url" id="link-grupo" placeholder="Cole o Link (https://...)" required />
         <textarea id="regras-grupo" rows="4" placeholder="Escreva a descrição ou regras..." required></textarea>
@@ -318,12 +306,10 @@
         <strong>Plano 1 Dia</strong> - R$ 2,00
         <button class="btn-impulsionar" onclick="selecionarPlano('1 Dia', 2, 1)">Escolher Plano (R$ 2,00)</button>
       </div>
-
       <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
         <strong>Plano 5 Dias</strong> - R$ 8,00
         <button class="btn-impulsionar" onclick="selecionarPlano('5 Dias', 8, 5)">Escolher Plano (R$ 8,00)</button>
       </div>
-
       <div style="border:1px solid #ff9900; padding:10px; border-radius:6px; margin-bottom:10px; text-align:left;">
         <strong>Plano 1 Mês (30 Dias)</strong> - R$ 30,00
         <button class="btn-impulsionar" onclick="selecionarPlano('1 Mês', 30, 30)">Escolher Plano (R$ 30,00)</button>
@@ -332,7 +318,7 @@
       <button type="button" class="btn-sair" id="btn-voltar-meus" style="width:100%;">Cancelar</button>
     </div>
 
-    <!-- TELA: ESCOLHER FORMA DE PAGAMENTO DO IMPULSIONAMENTO -->
+    <!-- TELA: ESCOLHER FORMA DE PAGAMENTO -->
     <div id="tela-opcao-pagamento" class="escondido">
       <h3>Forma de Pagamento</h3>
       <p style="font-size:13px; color:#555;">Plano Escolhido: <strong id="lbl-plano-nome"></strong> (<span id="lbl-plano-preco"></span>)</p>
@@ -341,7 +327,6 @@
         <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold;">Opção 1: Pagar com Ventilador Pay</p>
         <button class="btn-ventilador" id="btn-pagar-ventilador-pay">Pagar com Ventilador Pay</button>
       </div>
-
       <div class="box-metodo-pagamento">
         <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold;">Opção 2: Pagar pelo Chat (PIX)</p>
         <button class="btn-impulsionar" id="btn-pagar-chat">Pagar pelo Chat (PIX)</button>
@@ -350,25 +335,22 @@
       <button type="button" class="btn-sair" id="btn-voltar-opcoes-pagamento" style="width:100%; margin-top:15px;">Voltar aos Planos</button>
     </div>
 
-    <!-- TELA: PAGAMENTO VIA VENTILADOR PAY (DADOS DA CONTA) -->
+    <!-- TELA: PAGAMENTO VIA VENTILADOR PAY (COM CAMPO DE PIN) -->
     <div id="tela-ventilador-pay" class="escondido">
       <h3>Pagar com Ventilador Pay</h3>
       
       <div style="background:#eef2ff; border:1px solid #c7d2fe; padding:12px; border-radius:6px; text-align:left; font-size:13px; margin-bottom:15px;">
         <p style="margin:0 0 6px 0;"><strong>Plano:</strong> <span id="vpay-plano-nome"></span></p>
         <p style="margin:0;"><strong>Valor a Pagar:</strong> R$ <span id="vpay-valor"></span>,00</p>
-        <p style="font-size:11px; color:#555; margin:8px 0 0 0;">Informe os dados da sua conta no Ventilador Pay para debitar do seu saldo.</p>
+        <p style="font-size:11px; color:#555; margin:8px 0 0 0;">Informe os dados e o PIN da sua conta no Ventilador Pay.</p>
       </div>
 
       <form id="form-ventilador-pay">
-        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">E-mail da Conta Ventilador Pay:</label>
-        <input type="email" id="vpay-email-conta" placeholder="Digite seu e-mail cadastrado no Ventilador Pay" required />
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">E-mail da Conta:</label>
+        <input type="email" id="vpay-email-conta" placeholder="Digite seu e-mail" required />
 
-        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">Nome da Conta:</label>
-        <input type="text" id="vpay-nome-conta" placeholder="Digite o nome titular da conta" required />
-
-        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">CPF da Conta:</label>
-        <input type="text" id="vpay-cpf-conta" placeholder="000.000.000-00" required />
+        <label style="font-size:12px; font-weight:bold; display:block; text-align:left;">PIN de Segurança:</label>
+        <input type="password" id="vpay-pin-conta" placeholder="Digite seu PIN de 4 dígitos" maxlength="4" required />
 
         <button type="submit" class="btn-ventilador">Comprar / Confirmar Pagamento</button>
       </form>
@@ -376,15 +358,14 @@
       <button type="button" class="btn-sair" id="btn-cancelar-vpay" style="width:100%; margin-top:10px;">Voltar</button>
     </div>
 
-    <!-- TELA: CARREGANDO PAGAMENTO VENTILADOR PAY -->
+    <!-- TELA: CARREGANDO -->
     <div id="tela-vpay-carregando" class="escondido" style="text-align:center;">
       <h3>Processando Pagamento</h3>
-      <p style="font-size:13px; color:#555;">Verificando conta e saldo no Ventilador Pay...</p>
+      <p style="font-size:13px; color:#555;">Validando PIN e saldo no Ventilador Pay...</p>
       <div class="loader"></div>
-      <p style="font-size:12px; color:#888; margin-top:10px;">Aguarde, confirmando a transação...</p>
     </div>
 
-    <!-- TELA: SUCESSO DE COMPRA VENTILADOR PAY -->
+    <!-- TELA: SUCESSO -->
     <div id="tela-vpay-sucesso" class="escondido">
       <div class="card-sucesso">
         <div class="icone-sucesso">🎉</div>
@@ -394,14 +375,14 @@
       </div>
     </div>
 
-    <!-- TELA: CHAT DO IMPULSIONAMENTO (SUPORTE / ADMIN) -->
+    <!-- TELA: CHAT DO SUPORTE -->
     <div id="tela-chat-impulsionar" class="escondido">
       <h3>Atendimento / Suporte Chat</h3>
       <p style="font-size:11px; color:#666;">Atendimento direto com: <strong>lorenzoredig5@gmail.com</strong></p>
       
       <div class="chat-box" id="chat-mensagens">
         <div class="balao-chat balao-sistema">
-          Bem-vindo ao chat de suporte! Envie aqui o comprovante do PIX para o e-mail do admin (lorenzoredig5@gmail.com).
+          Bem-vindo ao chat de suporte! Envie aqui o comprovante do PIX para o e-mail do admin.
         </div>
       </div>
 
@@ -410,9 +391,8 @@
         <button type="submit" class="btn-secundario">Enviar Mensagem</button>
       </form>
 
-      <!-- BOTÃO EXCLUSIVO DE ADMIN PARA IMPULSIONAR DENTRO DO CHAT -->
       <div id="painel-admin-impulsionar" class="box-admin escondido">
-        <strong>Painel Admin (lorenzoredig5@gmail.com)</strong>
+        <strong>Painel Admin</strong>
         <p style="font-size:12px; margin:5px 0;">Aprovar impulsionamento direto:</p>
         <button type="button" class="btn-admin" onclick="adminAprovarImpulsionamento(1)">Impulsionar por 1 Dia</button>
         <button type="button" class="btn-admin" onclick="adminAprovarImpulsionamento(5)">Impulsionar por 5 Dias</button>
@@ -436,10 +416,13 @@
       onAuthStateChanged 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
-      getDatabase, ref, push, onValue, update, get
+      getDatabase, ref, push, onValue, update as updateRTDB
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { 
+      getFirestore, collection, query, where, getDocs, doc, updateDoc, addDoc
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Configuração do Firebase - Bluered
+    // Configuração do Firebase - Bluered (Realtime Database)
     const firebaseConfigBluered = {
       apiKey: "AIzaSyCDSZaI0FNuVTLGLru7M5Upm4l04B6LcXU",
       authDomain: "bluered-8832d.firebaseapp.com",
@@ -450,11 +433,10 @@
       appId: "1:622735655294:web:ab950b5a71883f1eb4b32f"
     };
 
-    // Configuração do Firebase - Ventilador Pay
+    // Configuração do Firebase - Ventilador Pay (Firestore - baseado no seu print)
     const firebaseConfigVentilador = {
       apiKey: "AIzaSyArC872DnSB3EBLNpl-Lxajo9rEbS2UlCc",
       authDomain: "ventilador-pay.firebaseapp.com",
-      databaseURL: "https://ventilador-pay-default-rtdb.firebaseio.com",
       projectId: "ventilador-pay",
       storageBucket: "ventilador-pay.firebasestorage.app",
       messagingSenderId: "466899508532",
@@ -462,13 +444,14 @@
       measurementId: "G-DBLHR13NDB"
     };
 
-    // Inicialização das duas instâncias do Firebase
     const appBluered = initializeApp(firebaseConfigBluered, "blueredApp");
     const appVentilador = initializeApp(firebaseConfigVentilador, "ventiladorApp");
 
     const auth = getAuth(appBluered);
     const db = getDatabase(appBluered);
-    const dbVPay = getDatabase(appVentilador);
+    
+    // Instância do Firestore para o Ventilador Pay
+    const dbVPayFirestore = getFirestore(appVentilador);
 
     const EMAIL_ADMIN = "lorenzoredig5@gmail.com";
 
@@ -478,7 +461,6 @@
     let linkSelecionado = "";
     let intervalVerificacao = null;
 
-    // Elementos da Interface
     const barUsuario = document.getElementById("bar-usuario");
     const userEmailDisplay = document.getElementById("user-email-display");
     
@@ -579,7 +561,6 @@
       try {
         const userCredential = await signInWithEmailAndPassword(auth, document.getElementById("email-login").value, document.getElementById("senha-login").value);
         const user = userCredential.user;
-        
         if (!user.emailVerified) {
           await sendEmailVerification(user);
           iniciarVerificacaoAutomatica(user);
@@ -618,7 +599,6 @@
     document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
     document.getElementById("go-to-cadastro").addEventListener("click", () => { esconderTelas(); telaCadastro.classList.remove("escondido"); });
     document.getElementById("go-to-login").addEventListener("click", () => { esconderTelas(); telaLogin.classList.remove("escondido"); });
-
     document.getElementById("btn-abrir-criar").addEventListener("click", () => { esconderTelas(); telaCriarGrupo.classList.remove("escondido"); });
     document.getElementById("btn-cancelar-criar").addEventListener("click", () => { esconderTelas(); telaGrupos.classList.remove("escondido"); });
     document.getElementById("btn-voltar-grupos").addEventListener("click", () => { esconderTelas(); telaGrupos.classList.remove("escondido"); });
@@ -673,7 +653,6 @@
         lista.forEach(g => {
           const card = document.createElement("div");
           card.className = "card-grupo";
-          
           const tipoTexto = formatarTipoText(g.tipo);
           const seloVerificado = g.impulsionado ? '<span class="selo-verificado" title="Grupo Impulsionado / Verificado">✓</span>' : '';
 
@@ -692,7 +671,6 @@
 
     function abrirRegrasGrupo(grupo) {
       const seloVerificado = grupo.impulsionado ? '<span class="selo-verificado">✓</span>' : '';
-      
       document.getElementById("detalhe-tipo-badge").textContent = formatarTipoText(grupo.tipo);
       document.getElementById("detalhe-nome-grupo").innerHTML = `${grupo.nome} ${seloVerificado}`;
       document.getElementById("detalhe-criador-grupo").textContent = grupo.criadoPor;
@@ -713,9 +691,7 @@
     }
 
     document.getElementById("btn-entrar-whatsapp").addEventListener("click", () => {
-      if (linkSelecionado) {
-        window.open(linkSelecionado, "_blank");
-      }
+      if (linkSelecionado) window.open(linkSelecionado, "_blank");
     });
 
     function carregarMeusGrupos() {
@@ -802,8 +778,7 @@
       document.getElementById("vpay-plano-nome").textContent = planoSelecionado.nome;
       document.getElementById("vpay-valor").textContent = planoSelecionado.preco;
       document.getElementById("vpay-email-conta").value = "";
-      document.getElementById("vpay-nome-conta").value = "";
-      document.getElementById("vpay-cpf-conta").value = "";
+      document.getElementById("vpay-pin-conta").value = "";
       
       esconderTelas();
       telaVentiladorPay.classList.remove("escondido");
@@ -827,113 +802,73 @@
       `;
     });
 
-    // Função melhorada e flexível para varrer o banco e achar a conta no Ventilador Pay
-    async function processarPagamentoVentiladorPay(emailInput, nomeInput, cpfInput, valorPlano) {
-      const cpfLimp = cpfInput.replace(/\D/g, '');
-      const nomeLimp = nomeInput.trim().toLowerCase();
+    // Função ajustada para buscar no FIRESTORE e validar o PIN
+    async function processarPagamentoVentiladorPayFirestore(emailInput, pinInput, valorPlano) {
       const emailLimp = emailInput.trim().toLowerCase();
-
-      const nodesToSearch = ['usuarios', 'contas', 'users'];
-      let contaEncontrada = null;
-      let nodePath = null;
-      let contaKey = null;
-
-      for (const node of nodesToSearch) {
-        try {
-          const snapshot = await get(ref(dbVPay, node));
-          if (snapshot.exists()) {
-            const data = snapshot.val();
-            for (const key in data) {
-              const u = data[key];
-              if (!u) continue;
-
-              const userCpf = u.cpf ? String(u.cpf).replace(/\D/g, '') : (u.cpf_conta ? String(u.cpf_conta).replace(/\D/g, '') : '');
-              const userNome = u.nome ? String(u.nome).trim().toLowerCase() : (u.nome_conta ? String(u.nome_conta).trim().toLowerCase() : '');
-              const userEmail = u.email ? String(u.email).trim().toLowerCase() : (u.email_conta ? String(u.email_conta).trim().toLowerCase() : '');
-
-              if ((emailLimp && userEmail === emailLimp) || (cpfLimp && userCpf === cpfLimp) || (nomeLimp && userNome === nomeLimp)) {
-                contaEncontrada = u;
-                nodePath = node;
-                contaKey = key;
-                break;
-              }
-            }
-          }
-        } catch (err) {
-          console.warn("Aviso na busca do nó:", node, err);
-        }
-        if (contaEncontrada) break;
-      }
-
-      // Fallback para buscar diretamente na raiz se a estrutura for plana
-      if (!contaEncontrada) {
-        try {
-          const snapshotRoot = await get(ref(dbVPay));
-          if (snapshotRoot.exists()) {
-            const rootData = snapshotRoot.val();
-            for (const key in rootData) {
-              const u = rootData[key];
-              if (u && typeof u === 'object' && (u.email || u.cpf || u.saldo || u.saldo_conta)) {
-                const userCpf = u.cpf ? String(u.cpf).replace(/\D/g, '') : '';
-                const userEmail = u.email ? String(u.email).trim().toLowerCase() : '';
-                if ((emailLimp && userEmail === emailLimp) || (cpfLimp && userCpf === cpfLimp)) {
-                  contaEncontrada = u;
-                  nodePath = "";
-                  contaKey = key;
-                  break;
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.warn("Busca na raiz ignorada:", e);
-        }
-      }
-
-      if (!contaEncontrada) {
-        return { sucesso: false, erro: "Conta não encontrada no Ventilador Pay. Verifique se o e-mail, nome ou CPF estão exatamente iguais aos cadastrados lá." };
-      }
-
-      const saldoAtual = Number(contaEncontrada.saldo !== undefined ? contaEncontrada.saldo : (contaEncontrada.saldo_conta !== undefined ? contaEncontrada.saldo_conta : (contaEncontrada.creditos || 0)));
-
-      if (isNaN(saldoAtual) || saldoAtual < valorPlano) {
-        return { 
-          sucesso: false, 
-          erro: `Saldo insuficiente no Ventilador Pay. Seu saldo atual é R$ ${saldoAtual.toFixed(2)}, mas o plano custa R$ ${valorPlano.toFixed(2)}.` 
-        };
-      }
-
-      let campoSaldo = 'saldo';
-      if ('saldo_conta' in contaEncontrada) campoSaldo = 'saldo_conta';
-      else if ('creditos' in contaEncontrada) campoSaldo = 'creditos';
-
-      const novoSaldo = saldoAtual - valorPlano;
-      const caminhoUpdate = nodePath ? `${nodePath}/${contaKey}` : `${contaKey}`;
-
-      await update(ref(dbVPay, caminhoUpdate), {
-        [campoSaldo]: novoSaldo
-      });
+      const pinLimp = String(pinInput).trim();
 
       try {
-        await push(ref(dbVPay, 'transacoes'), {
-          usuario: contaEncontrada.email || contaEncontrada.nome || emailInput,
-          valor: valorPlano,
-          tipo: 'compra_impulsionamento_bluered',
-          data: new Date().toISOString()
-        });
-      } catch (e) {
-        console.log("Transação registrada.");
-      }
+        const contasRef = collection(dbVPayFirestore, "Contas");
+        const q = query(contasRef, where("email", "==", emailLimp));
+        const querySnapshot = await getDocs(q);
 
-      return { sucesso: true, novoSaldo };
+        if (querySnapshot.empty) {
+          return { sucesso: false, erro: "Conta não encontrada com este e-mail no Ventilador Pay." };
+        }
+
+        let contaDoc = null;
+        let dadosConta = null;
+
+        querySnapshot.forEach((documento) => {
+          contaDoc = documento;
+          dadosConta = documento.data();
+        });
+
+        // Validação do PIN
+        if (String(dadosConta.pin) !== pinLimp) {
+          return { sucesso: false, erro: "PIN de segurança incorreto. Tente novamente." };
+        }
+
+        const saldoAtual = Number(dadosConta.saldo || 0);
+        if (saldoAtual < valorPlano) {
+          return { 
+            sucesso: false, 
+            erro: `Saldo insuficiente. Seu saldo atual é R$ ${saldoAtual.toFixed(2)}, mas o plano custa R$ ${valorPlano.toFixed(2)}.` 
+          };
+        }
+
+        const novoSaldo = saldoAtual - valorPlano;
+
+        // Atualiza o saldo no Firestore do Ventilador Pay
+        const contaRefDoc = doc(dbVPayFirestore, "Contas", contaDoc.id);
+        await updateDoc(contaRefDoc, {
+          saldo: novoSaldo
+        });
+
+        // Registra a transação na coleção transacoes
+        try {
+          await addDoc(collection(dbVPayFirestore, "transacoes"), {
+            usuario: dadosConta.email,
+            valor: valorPlano,
+            tipo: 'compra_impulsionamento_bluered',
+            data: new Date().toISOString()
+          });
+        } catch (e) {
+          console.log("Erro ao salvar transação, mas o saldo foi debitado.");
+        }
+
+        return { sucesso: true, novoSaldo };
+
+      } catch (err) {
+        return { sucesso: false, erro: "Erro ao conectar com o banco do Ventilador Pay: " + err.message };
+      }
     }
 
     document.getElementById("form-ventilador-pay").addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const email = document.getElementById("vpay-email-conta").value.trim();
-      const nome = document.getElementById("vpay-nome-conta").value.trim();
-      const cpf = document.getElementById("vpay-cpf-conta").value.trim();
+      const email = document.getElementById("vpay-email-conta").value;
+      const pin = document.getElementById("vpay-pin-conta").value;
 
       if (!grupoSelecionadoParaImpulsionar) {
         alert("Erro: Nenhum grupo/publicação selecionado.");
@@ -944,7 +879,7 @@
       telaVpayCarregando.classList.remove("escondido");
 
       try {
-        const resultado = await processarPagamentoVentiladorPay(email, nome, cpf, planoSelecionado.preco);
+        const resultado = await processarPagamentoVentiladorPayFirestore(email, pin, planoSelecionado.preco);
 
         if (!resultado.sucesso) {
           alert("Falha na Compra: " + resultado.erro);
@@ -954,7 +889,7 @@
         }
 
         const grupoRef = ref(db, `grupos/${grupoSelecionadoParaImpulsionar}`);
-        await update(grupoRef, {
+        await updateRTDB(grupoRef, {
           impulsionado: true,
           diasImpulsionados: planoSelecionado.dias
         });
@@ -987,7 +922,7 @@
     window.adminAprovarPorId = async function(idGrupo, dias) {
       try {
         const itemRef = ref(db, `grupos/${idGrupo}`);
-        await update(itemRef, {
+        await updateRTDB(itemRef, {
           impulsionado: true,
           diasImpulsionados: dias
         });
@@ -1006,7 +941,6 @@
       const chatBox = document.getElementById("chat-mensagens");
       chatBox.innerHTML += `<div class="balao-chat balao-usuario"><strong>${usuarioAtual.email}:</strong> ${texto}</div>`;
       input.value = "";
-
       chatBox.scrollTop = chatBox.scrollHeight;
     });
   </script>
