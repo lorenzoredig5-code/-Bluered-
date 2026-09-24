@@ -419,7 +419,7 @@
       getDatabase, ref, push, onValue, update as updateRTDB
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
     import { 
-      getFirestore, collection, query, where, getDocs, doc, updateDoc, addDoc
+      getFirestore, collection, getDocs, doc, updateDoc, addDoc
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     // Configuração do Firebase - Bluered (Realtime Database)
@@ -433,7 +433,7 @@
       appId: "1:622735655294:web:ab950b5a71883f1eb4b32f"
     };
 
-    // Configuração do Firebase - Ventilador Pay (Firestore - baseado no seu print)
+    // Configuração do Firebase - Ventilador Pay (Firestore)
     const firebaseConfigVentilador = {
       apiKey: "AIzaSyArC872DnSB3EBLNpl-Lxajo9rEbS2UlCc",
       authDomain: "ventilador-pay.firebaseapp.com",
@@ -802,31 +802,37 @@
       `;
     });
 
-    // Função ajustada para buscar no FIRESTORE e validar o PIN
+    // Função robusta ajustada para buscar no FIRESTORE ignorando maiúsculas/minúsculas
     async function processarPagamentoVentiladorPayFirestore(emailInput, pinInput, valorPlano) {
       const emailLimp = emailInput.trim().toLowerCase();
       const pinLimp = String(pinInput).trim();
 
       try {
         const contasRef = collection(dbVPayFirestore, "Contas");
-        const q = query(contasRef, where("email", "==", emailLimp));
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(contasRef);
 
         if (querySnapshot.empty) {
-          return { sucesso: false, erro: "Conta não encontrada com este e-mail no Ventilador Pay." };
+          return { sucesso: false, erro: "A coleção 'Contas' está vazia ou não foi encontrada no Ventilador Pay." };
         }
 
         let contaDoc = null;
         let dadosConta = null;
 
         querySnapshot.forEach((documento) => {
-          contaDoc = documento;
-          dadosConta = documento.data();
+          const dados = documento.data();
+          if (dados.email && dados.email.trim().toLowerCase() === emailLimp) {
+            contaDoc = documento;
+            dadosConta = dados;
+          }
         });
 
+        if (!contaDoc || !dadosConta) {
+          return { sucesso: false, erro: "Nenhuma conta com este e-mail foi encontrada no Ventilador Pay." };
+        }
+
         // Validação do PIN
-        if (String(dadosConta.pin) !== pinLimp) {
-          return { sucesso: false, erro: "PIN de segurança incorreto. Tente novamente." };
+        if (String(dadosConta.pin).trim() !== pinLimp) {
+          return { sucesso: false, erro: "PIN de segurança incorreto. O PIN digitado não confere com o da conta." };
         }
 
         const saldoAtual = Number(dadosConta.saldo || 0);
@@ -845,7 +851,7 @@
           saldo: novoSaldo
         });
 
-        // Registra a transação na coleção transacoes
+        // Registra a transação
         try {
           await addDoc(collection(dbVPayFirestore, "transacoes"), {
             usuario: dadosConta.email,
